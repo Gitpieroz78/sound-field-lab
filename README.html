@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Sound Field Lab</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <style>
+
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+  font-size: inherit;
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1 id="sound-field-lab">Sound Field Lab</h1>
+<p>One offline page that shows how sound leaves loudspeakers and fills
+the space: the molecules of the air, the pressure field, the level map,
+the directivity. It grew out of the "Sound field of a simple source"
+animation made for Magu after the Meyer Sound "System Design and
+Optimization" seminar (20-22 October 2026), and keeps everything he
+liked in it: one molecule in a million, the highlighted molecule, colour
+by pressure, "Fit 4 wavelengths", ÷2 / ×2, the time period switch,
+English, Spanish and Italian.</p>
+<p><strong>Open it: <a
+href="https://gitpieroz78.github.io/sound-field-lab/">https://gitpieroz78.github.io/sound-field-lab/</a></strong></p>
+<p>Or download <code>index.html</code> and open it in any browser: it is
+a single file and works offline. No installation, no account.</p>
+<h2 id="the-screen">The screen</h2>
+<ul>
+<li><strong>Toolbar</strong> (top): five ways of looking at the same
+field, and three cameras.</li>
+<li><strong>Transport</strong> (bottom left): play / pause, ÷2,
+frequency, ×2, fit 4 λ, fit the scene.</li>
+<li><strong>Readings</strong> (top left): frequency, period, on-screen
+cycle, speed of sound, wavelength, impedance ρc, absorption, screen
+width, the system and, when it is on, the microphone.</li>
+<li><strong>Side panel</strong>: four tabs. Signal, Speakers, Medium,
+View.</li>
+<li><strong>Examples</strong> (header): sixteen ready-made scenes, from
+the simple source to the end-fire sub array.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>What it shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Molecules</td>
+<td>one air molecule in a million, moving back and forth; flat dots from
+the top, shaded spheres at 45°</td>
+</tr>
+<tr>
+<td>Pressure</td>
+<td>the instantaneous pressure as colour (green +, red −), like a ripple
+tank</td>
+</tr>
+<tr>
+<td>SPL map</td>
+<td>the level in 3 dB bands, relative to the loudest point, like a
+prediction software</td>
+</tr>
+<tr>
+<td>Surface</td>
+<td>the pressure as the height of a moving sheet</td>
+</tr>
+<tr>
+<td>Air block</td>
+<td>a cube of air cut open: the wavefronts on its faces</td>
+</tr>
+</tbody>
+</table>
+<p>Cameras: <strong>Top</strong>, <strong>45°</strong> (isometric) and
+<strong>Low</strong> (grazing). Drag to rotate freely, double-click to
+go back. Every mode works with every camera.</p>
+<h2 id="speakers-tab">Speakers tab</h2>
+<p><strong>Installations</strong></p>
+<table>
+<thead>
+<tr>
+<th>Installation</th>
+<th>Layout</th>
+<th>Processing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single</td>
+<td>one box</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Straight line</td>
+<td>N boxes side by side</td>
+<td>none: all at the same time</td>
+</tr>
+<tr>
+<td>Arc</td>
+<td>N boxes on a physical arc, aimed outwards</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Arc delay</td>
+<td>straight line</td>
+<td>edges delayed as if they stood on the arc</td>
+</tr>
+<tr>
+<td>Gradient (cardioid)</td>
+<td>front and rear sub, both facing forward</td>
+<td>rear inverted, delayed by depth / c</td>
+</tr>
+<tr>
+<td>Inverted stack</td>
+<td>rear sub turned backwards</td>
+<td>rear inverted, delayed by depth / c</td>
+</tr>
+<tr>
+<td>End-fire</td>
+<td>N subs in line along the axis</td>
+<td>front ones delayed by spacing / c</td>
+</tr>
+<tr>
+<td>Left / right</td>
+<td>two sources far apart</td>
+<td>none: power alley and comb</td>
+</tr>
+<tr>
+<td>End-fire wings</td>
+<td>two end-fire lines on the sides, splayed outwards</td>
+<td>as end-fire</td>
+</tr>
+<tr>
+<td>Steered line</td>
+<td>straight line</td>
+<td>linear delay ramp: the beam turns by the angle</td>
+</tr>
+<tr>
+<td>Line array (J)</td>
+<td>flown array, vertical section, J curve</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Delay speaker</td>
+<td>main and a delay downstream</td>
+<td>delay = distance / c</td>
+</tr>
+</tbody>
+</table>
+<p>Delays are computed with the speed of sound of the medium you are in,
+as a system tech would set them. The <strong>processing table</strong>
+lets you change gain, delay, polarity and mute of each box; the layout
+then becomes custom until you press "Back to the installation
+defaults".</p>
+<p><strong>Loudspeakers</strong>: point, 18" sub, self-cardioid sub, 12"
+full range with 90° horn, line array element, column, dipole. Each card
+shows its directivity at 2 kHz.</p>
+<p><strong>Boundary</strong>: free field, a wall behind the system, a
+side wall (a floor in the vertical section), with distance and
+reflection. Modelled with a mirror-image source.</p>
+<h2 id="medium-tab">Medium tab</h2>
+<p>Air (temperature and humidity), helium, hydrogen, CO₂ (also the cold
+fog of dry ice), fresh water, sea water, steel, or any speed of sound.
+The panel gives λ, c, ρ, impedance ρc and the absorption at the current
+frequency.</p>
+<h2 id="the-model-and-its-limits">The model, and its limits</h2>
+<ul>
+<li>Steady-state sine at one frequency. Every box is a point source with
+a directivity, a gain, a delay and a polarity; the field is their
+complex sum.</li>
+<li>Directivity: cabinet baffle from omni (ka ≪ 1) to front hemisphere
+(ka ≫ 1); piston (Bessel J1) for the 12" woofer; constant-directivity
+horn; a 35 cm line source for the line array element in the vertical
+section; first-order cardioid for the self-cardioid sub.</li>
+<li>The SPL map uses the true 1/r spreading. Molecules, pressure,
+surface and block use a softer law so the far field stays visible, as in
+the original animation.</li>
+<li>Air absorption: ISO 9613-1. Sea water: Thorp. Speeds of sound: 331.4
++ 0.607·T for air (Steve Bush, Audio Physics), Marczak for fresh water,
+Medwin for sea water.</li>
+<li>This is a teaching tool, not a prediction tool: no measured
+loudspeaker data, no room, no diffraction around cabinets. Use MAPP 3D
+or the manufacturer's software for design.</li>
+</ul>
+<h2 id="checks">Checks</h2>
+<p>The physics was checked with automated tests against independent
+values: the ISO 9613 absorption coefficients, the end-fire and gradient
+delays used in the Meyer Sound seminar, cardioid rejection, the steering
+angle of a delayed line and the +6 dB of a wall close behind a source.
+The page makes no network requests.</p>
+<h2 id="credits">Credits</h2>
+<p>Inspired by Dan Russell's acoustics animations (Penn State), the PhET
+"Waves" simulations, Paul Falstad's ripple tank and the Meyer Sound
+seminar with Mauricio "Magu" Ramírez. Nothing of theirs is included: the
+page is built from the equations above. Free to copy, share and
+modify.</p>
+</body>
+</html>

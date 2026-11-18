@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Field Lab</title>
+<style>/* Sound Field Lab — layout and theme. Every colour is a token; light by default, dark by system or by toggle. */
+:root {
+  --bg: #f3f2ee; --panel: #ffffff; --panel2: #f8f7f4; --ink: #1b1d1f; --muted: #686d72; --line: #dedbd3;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --chip: #ecebe6; --chip-on: #dfe8f8;
+  --dot: #2b2b28; --source: #c8102e; --pos: #1a9c4b; --neg: #d6322a; --hl: #e0202a; --cab: #4a4f55;
+  --shadow: 0 1px 2px rgba(20, 22, 25, .06), 0 4px 16px rgba(20, 22, 25, .06);
+  --stage: #f7f6f3;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1012; --panel: #16191c; --panel2: #1b1f23; --ink: #e8eaec; --muted: #9aa1a8; --line: #2a2f35;
+  --accent: #7fb0ff; --accent-ink: #0e1012; --chip: #22272c; --chip-on: #233451;
+  --dot: #e6e6e2; --source: #ff6b6b; --pos: #3ddc84; --neg: #ff5a52; --hl: #ff3b3b; --cab: #8a929b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35); --stage: #111316; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1012; --panel: #16191c; --panel2: #1b1f23; --ink: #e8eaec; --muted: #9aa1a8; --line: #2a2f35;
+  --accent: #7fb0ff; --accent-ink: #0e1012; --chip: #22272c; --chip-on: #233451;
+  --dot: #e6e6e2; --source: #ff6b6b; --pos: #3ddc84; --neg: #ff5a52; --hl: #ff3b3b; --cab: #8a929b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35); --stage: #111316; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); overflow: hidden;
+}
+button, select, input { font: inherit; color: inherit; }
+.num, output, .ro b { font-variant-numeric: tabular-nums; }
+
+/* ---------- header ---------- */
+header {
+  display: flex; align-items: center; gap: 12px; padding: 8px 16px; min-height: 52px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand svg { flex: none; color: var(--accent); }
+.brand h1 { font-size: 17px; font-weight: 650; margin: 0; letter-spacing: -.01em; white-space: nowrap; }
+.brand .sub { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spacer { flex: 1; }
+.hbtn, .hsel {
+  height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2);
+  padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.hbtn:hover, .hsel:hover { border-color: var(--muted); }
+.hbtn.icon { width: 32px; justify-content: center; padding: 0; }
+
+/* ---------- main ---------- */
+main { display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0; }
+#stage { position: relative; min-width: 0; min-height: 0; background: var(--stage); overflow: hidden; }
+#c { display: block; width: 100%; height: 100%; touch-action: none; }
+#c.orbit { cursor: grab; }
+#c.mic { cursor: crosshair; }
+
+.card {
+  background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow); backdrop-filter: blur(6px);
+}
+.ro { position: absolute; left: 12px; top: 12px; padding: 8px 12px; font-size: 13px;
+  display: grid; grid-template-columns: auto auto; column-gap: 14px; row-gap: 1px; max-width: calc(100% - 24px); }
+.ro .k { color: var(--muted); }
+.ro b { font-weight: 600; text-align: right; }
+.ro .sep { grid-column: 1 / -1; border-top: 1px solid var(--line); margin: 4px 0; }
+.ro.collapsed > :not(.ro-toggle) { display: none; }
+.ro-toggle { grid-column: 1 / -1; display: none; }
+
+.toolbar { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
+  max-width: calc(100% - 300px); }
+.seg { display: inline-flex; padding: 3px; gap: 2px; }
+.seg button {
+  border: 0; background: transparent; border-radius: 8px; padding: 6px 10px; cursor: pointer; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.seg button:hover { color: var(--ink); background: var(--chip); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg svg { width: 16px; height: 16px; flex: none; }
+
+.transport { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 4px; padding: 4px; }
+.transport button { border: 0; background: transparent; height: 32px; min-width: 32px; padding: 0 8px; border-radius: 8px; cursor: pointer; }
+.transport button:hover { background: var(--chip); }
+.transport .play { background: var(--accent); color: var(--accent-ink); width: 40px; }
+.transport .play:hover { background: var(--accent); filter: brightness(1.08); }
+.transport .fq { font-weight: 650; padding: 0 8px; min-width: 76px; text-align: center; }
+.transport .vsep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+
+.insets { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; align-items: flex-end; }
+.legend { padding: 8px 10px; font-size: 12px; }
+.legend .bar { display: flex; height: 10px; border-radius: 3px; overflow: hidden; margin: 6px 0 3px; width: 200px; }
+.legend .bar span { flex: 1; }
+.legend .ticks { display: flex; justify-content: space-between; color: var(--muted); }
+.polar { padding: 6px; }
+.polar canvas { display: block; width: 180px; height: 180px; }
+.polar .t { font-size: 12px; color: var(--muted); text-align: center; margin-top: 2px; }
+.hint { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); font-size: 12px; color: var(--muted);
+  padding: 4px 10px; pointer-events: none; white-space: nowrap; transition: opacity .6s; }
+.hint.gone { opacity: 0; }
+
+/* ---------- sidebar ---------- */
+aside { background: var(--panel); border-left: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+.tabs button {
+  border: 0; background: transparent; padding: 10px 4px 9px; cursor: pointer; color: var(--muted); font-weight: 550;
+  border-bottom: 2px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 12.5px;
+}
+.tabs button svg { width: 18px; height: 18px; }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.panel { overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+.sec > h3 { margin: 0; font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ctl { display: flex; flex-direction: column; gap: 3px; }
+.ctl label { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 13px; }
+.ctl label output { color: var(--ink); font-weight: 600; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 2px 0; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.field { height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); padding: 0 8px; min-width: 0; }
+.field.num { width: 96px; }
+.btn {
+  height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); padding: 0 10px; cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chips button { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 3px 9px; cursor: pointer; font-size: 12.5px; }
+.chips button:hover { border-color: var(--muted); }
+.chips button[aria-pressed="true"] { background: var(--chip-on); border-color: var(--accent); color: var(--accent); }
+.chk { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 13.5px; }
+.chk input { margin-top: 2px; accent-color: var(--accent); }
+.note { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.note b { color: var(--ink); font-weight: 600; }
+
+.grid-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.gcard {
+  border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 6px 4px 6px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; font-size: 11.5px; line-height: 1.2; min-width: 0;
+}
+.gcard:hover { border-color: var(--muted); }
+.gcard[aria-pressed="true"] { border-color: var(--accent); background: var(--chip-on); color: var(--accent); }
+.gcard canvas { width: 100%; height: 46px; display: block; }
+.gcard span { overflow-wrap: anywhere; }
+
+details.box { border: 1px solid var(--line); border-radius: 10px; background: var(--panel2); }
+details.box > summary { cursor: pointer; padding: 8px 10px; font-weight: 600; font-size: 13px; list-style: none; display: flex; justify-content: space-between; }
+details.box > summary::after { content: "▸"; color: var(--muted); }
+details.box[open] > summary::after { content: "▾"; }
+details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.proc { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.proc th { text-align: left; color: var(--muted); font-weight: 550; padding: 2px 3px; }
+.proc td { padding: 2px 3px; }
+.proc input[type=number] { width: 62px; height: 26px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 0 4px; }
+.proc-wrap { max-height: 260px; overflow: auto; }
+
+.ex-menu { position: absolute; top: 46px; right: 0; width: 300px; max-height: 70vh; overflow: auto; padding: 6px; z-index: 20; }
+.ex-menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.ex-menu button:hover { background: var(--chip); }
+.ex-menu button small { display: block; color: var(--muted); }
+.relwrap { position: relative; }
+
+.help { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.help .card { max-width: 520px; width: 100%; padding: 18px 20px; background: var(--panel); }
+.help h2 { margin: 0 0 10px; font-size: 17px; }
+.help table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.help td { padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.help kbd { font: 12px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; background: var(--panel2); }
+
+@media (max-width: 900px) {
+  body { overflow: auto; grid-template-rows: auto auto; }
+  header { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); gap: 8px; }
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 64vh auto; }
+  aside { border-left: 0; border-top: 1px solid var(--line); min-width: 0; }
+  .panel { overflow: visible; }
+  .toolbar { max-width: calc(100% - 24px); left: 12px; right: 12px; top: 56px; justify-content: flex-start; }
+  .ro { font-size: 12px; padding: 4px; }
+  .ro.collapsed { padding: 4px; }
+  .ro-toggle { display: block; height: 28px; }
+  .brand .sub { display: none; }
+  .hint { display: none; }
+  .insets { bottom: 60px; right: 12px; flex-direction: column; align-items: flex-end; }
+  .polar canvas { width: 120px; height: 120px; }
+  .legend .bar { width: 150px; }
+}
+@media (max-width: 520px) {
+  #modeSeg button span { display: none; }
+  .seg button { padding: 6px 8px; }
+  .brand h1 { font-size: 15px; }
+  #exBtn span { display: none; }
+  #exBtn::before { content: "★"; }
+  .transport .fq { min-width: 60px; padding: 0 4px; }
+  .transport button { padding: 0 6px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="6" cy="13" r="2.4" fill="currentColor" stroke="none"/><path d="M10 8.5a6.5 6.5 0 0 1 0 9"/><path d="M14 5.5a10.5 10.5 0 0 1 0 15"/><path d="M18 2.8a14.5 14.5 0 0 1 0 20.4"/>
+    </svg>
+    <h1>Sound Field Lab</h1>
+    <span class="sub" data-i18n="subtitle">Every dot is one air molecule in a million</span>
+  </div>
+  <span class="spacer"></span>
+  <div class="relwrap">
+    <button class="hbtn" id="exBtn" aria-haspopup="true" aria-expanded="false"><span data-i18n="examples">Examples</span> ▾</button>
+    <div class="ex-menu card" id="exMenu" hidden></div>
+  </div>
+  <select class="hsel" id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="it">IT</option></select>
+  <button class="hbtn icon" id="theme" title="Light / dark" aria-label="Light / dark">◐</button>
+  <button class="hbtn icon" id="helpBtn" title="Keyboard" aria-label="Help">?</button>
+</header>
+<main>
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <div class="ro card" id="ro">
+      <button class="ro-toggle btn" id="roToggle" data-i18n="readings">Readings</button>
+      <span class="k" data-i18n="r_f">Frequency</span><b id="r_f"></b>
+      <span class="k" data-i18n="r_T">Period</span><b id="r_T"></b>
+      <span class="k" data-i18n="r_v">On screen</span><b id="r_v"></b>
+      <span class="k" data-i18n="r_c">Speed of sound</span><b id="r_c"></b>
+      <span class="k" data-i18n="r_l">Wavelength</span><b id="r_l"></b>
+      <span class="k" data-i18n="r_z">Impedance ρc</span><b id="r_z"></b>
+      <span class="k" data-i18n="r_a">Absorption</span><b id="r_a"></b>
+      <span class="k" data-i18n="r_s">Screen width</span><b id="r_s"></b>
+      <span class="sep"></span>
+      <span class="k" data-i18n="r_sys">System</span><b id="r_sys"></b>
+      <span class="k" id="r_mic_k" hidden data-i18n="r_mic">Microphone</span><b id="r_mic" hidden></b>
+    </div>
+    <div class="toolbar">
+      <div class="seg card" role="group" aria-label="Mode" id="modeSeg">
+        <button data-mode="molecules" title="1"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="4" r="1.3"/><circle cx="8" cy="3" r="1.3"/><circle cx="13" cy="5" r="1.3"/><circle cx="5" cy="9" r="1.3"/><circle cx="11" cy="10" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/><circle cx="13" cy="14" r="1.3"/></svg><span data-i18n="m_mol">Molecules</span></button>
+        <button data-mode="ripple" title="2"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2"/><circle cx="8" cy="8" r="4.5"/><circle cx="8" cy="8" r="7"/></svg><span data-i18n="m_rip">Pressure</span></button>
+        <button data-mode="spl" title="3"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" fill="currentColor" opacity=".25"/><path d="M1 11c3-5 9-7 14-6v9H1z" fill="currentColor"/></svg><span data-i18n="m_spl">SPL map</span></button>
+        <button data-mode="surface" title="4"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 11c2-4 4-4 6 0s4 4 6 0 2-3 2-3"/><path d="M1 7c2-4 4-4 6 0s4 4 6 0"/></svg><span data-i18n="m_surf">Surface</span></button>
+        <button data-mode="block" title="5"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5l6 3.5v6.5L8 15 2 11.5V5z"/><path d="M8 8.5V15M8 8.5L2 5M8 8.5l6-3.5"/></svg><span data-i18n="m_block">Air block</span></button>
+      </div>
+      <div class="seg card" role="group" aria-label="Camera" id="camSeg">
+        <button data-cam="top" title="C"><span data-i18n="c_top">Top</span></button>
+        <button data-cam="iso"><span>45°</span></button>
+        <button data-cam="low"><span data-i18n="c_low">Low</span></button>
+      </div>
+    </div>
+    <div class="transport card">
+      <button class="play" id="play" title="Space" aria-label="Play / pause">❚❚</button>
+      <div class="vsep"></div>
+      <button id="half" title="÷2 (Shift ←)">÷2</button>
+      <span class="fq num" id="fq">1 kHz</span>
+      <button id="dbl" title="×2 (Shift →)">×2</button>
+      <div class="vsep"></div>
+      <button id="fitL" title="F" data-i18n="fit4">Fit 4 λ</button>
+      <button id="fitS" title="G" data-i18n="fitscene">Fit scene</button>
+    </div>
+    <div class="insets">
+      <div class="legend card" id="legend" hidden>
+        <div data-i18n="legend">Level (dB, relative to the loudest point)</div>
+        <div class="bar" id="legendBar"></div>
+        <div class="ticks" id="legendTicks"></div>
+      </div>
+      <div class="polar card" id="polarCard" hidden>
+        <canvas id="polar" width="360" height="360"></canvas>
+        <div class="t" id="polarT"></div>
+      </div>
+    </div>
+    <div class="hint card" id="hint" data-i18n="hint">Drag to rotate · double-click resets · ? for keys</div>
+  </div>
+
+  <aside>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="signal" aria-selected="true"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 9c2-6 4-6 6 0s4 6 6 0 3-5 4-3"/></svg><span data-i18n="t_signal">Signal</span></button>
+      <button role="tab" data-tab="speakers" aria-selected="false"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="1.5" width="12" height="15" rx="2"/><circle cx="9" cy="11" r="3"/><circle cx="9" cy="5" r="1.3"/></svg><span data-i18n="t_speakers">Speakers</span></button>
+      <button role="tab" data-tab="medium" aria-selected="false"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 1.5c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"/></svg><span data-i18n="t_medium">Medium</span></button>
+      <button role="tab" data-tab="view" aria-selected="false"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 9s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z"/><circle cx="9" cy="9" r="2.5"/></svg><span data-i18n="t_view">View</span></button>
+    </div>
+
+    <!-- SIGNAL -->
+    <div class="panel" data-panel="signal">
+      <div class="sec">
+        <h3 data-i18n="freq">Frequency</h3>
+        <div class="ctl">
+          <label><span data-i18n="freq">Frequency</span><output id="o_f"></output></label>
+          <input id="f" type="range" min="0" max="1000" step="1">
+          <div class="row"><input id="fnum" class="field num" type="number" min="20" max="20000" step="1"><span>Hz</span>
+            <button class="btn" id="half2">÷2</button><button class="btn" id="dbl2">×2</button></div>
+        </div>
+        <div class="chips" id="octChips"></div>
+      </div>
+      <div class="sec">
+        <h3 data-i18n="motion">Motion</h3>
+        <div class="ctl"><label><span data-i18n="amp">Amplitude</span><output id="o_a"></output></label><input id="a" type="range" min="0" max="100" step="1"></div>
+        <div class="ctl"><label><span data-i18n="speed">Animation speed</span><output id="o_v"></output></label><input id="v" type="range" min="0" max="1000" step="1"></div>
+        <label class="chk"><input id="tp" type="checkbox"><span data-i18n="tp">Time period follows frequency</span></label>
+        <div class="note" id="speednote"></div>
+      </div>
+      <div class="sec">
+        <h3 data-i18n="scale">Scale</h3>
+        <div class="ctl"><label><span data-i18n="r_s">Screen width</span><output id="o_s"></output></label><input id="s" type="range" min="0" max="1000" step="1"></div>
+        <label class="chk"><input id="lock" type="checkbox"><span data-i18n="lock">Keep screen scale when frequency changes</span></label>
+        <div class="row"><button class="btn" id="fitL2" data-i18n="fit4l">Fit 4 wavelengths</button><button class="btn" id="fitS2" data-i18n="fitscene">Fit scene</button></div>
+      </div>
+    </div>
+
+    <!-- SPEAKERS -->
+    <div class="panel" data-panel="speakers" hidden>
+      <div class="sec">
+        <h3 data-i18n="install">Installation</h3>
+        <div class="grid-cards" id="instCards"></div>
+        <div class="note" id="instNote"></div>
+      </div>
+      <div class="sec" id="paramSec">
+        <h3 data-i18n="params">Layout</h3>
+        <div id="params" class="sec"></div>
+      </div>
+      <div class="sec">
+        <h3 data-i18n="element">Loudspeaker</h3>
+        <div class="grid-cards" id="elemCards"></div>
+        <div class="note" id="elemNote"></div>
+      </div>
+      <details class="box" id="procBox">
+        <summary><span data-i18n="proc">Processing per element</span></summary>
+        <div class="in">
+          <div class="note" data-i18n="procnote">Gain, delay and polarity of each box, as in a system processor. Editing a value makes the layout custom.</div>
+          <div class="proc-wrap"><table class="proc" id="procTable"></table></div>
+          <button class="btn" id="procReset" data-i18n="procreset">Back to the installation defaults</button>
+        </div>
+      </details>
+      <div class="sec">
+        <h3 data-i18n="boundary">Boundary</h3>
+        <div class="chips" id="bndChips"></div>
+        <div id="bndCtl" class="sec">
+          <div class="ctl"><label><span data-i18n="bdist">Distance from the system</span><output id="o_bd"></output></label><input id="bd" type="range" min="0" max="1000" step="1"></div>
+          <div class="ctl"><label><span data-i18n="brefl">Reflection</span><output id="o_br"></output></label><input id="br" type="range" min="0" max="100" step="1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDIUM -->
+    <div class="panel" data-panel="medium" hidden>
+      <div class="sec">
+        <h3 data-i18n="medium">Medium</h3>
+        <div class="grid-cards" id="medCards"></div>
+        <div class="note" id="medNote"></div>
+      </div>
+      <div class="sec">
+        <div class="ctl" id="tempCtl"><label><span data-i18n="temp">Temperature</span><output id="o_t"></output></label><input id="t" type="range" min="-20" max="45" step="1"></div>
+        <div class="ctl" id="humCtl"><label><span data-i18n="hum">Relative humidity</span><output id="o_h"></output></label><input id="h" type="range" min="10" max="100" step="1"></div>
+        <div class="ctl" id="cCtl"><label><span data-i18n="customc">Speed of sound</span><output id="o_cc"></output></label><input id="cc" type="range" min="0" max="1000" step="1"></div>
+        <label class="chk"><input id="absorb" type="checkbox"><span data-i18n="absorb">Include absorption (air: ISO 9613-1)</span></label>
+      </div>
+      <div class="sec">
+        <h3 data-i18n="medinfo">At this frequency</h3>
+        <div class="note" id="medInfo"></div>
+      </div>
+    </div>
+
+    <!-- VIEW -->
+    <div class="panel" data-panel="view" hidden>
+      <div class="sec">
+        <h3 data-i18n="show">Show</h3>
+        <label class="chk"><input id="color" type="checkbox"><span data-i18n="color">Colour by pressure (green +, red −)</span></label>
+        <label class="chk"><input id="hl" type="checkbox"><span data-i18n="hl">Highlight one molecule</span></label>
+        <label class="chk"><input id="labels" type="checkbox"><span data-i18n="labels">Delay and polarity labels</span></label>
+        <label class="chk"><input id="polarOn" type="checkbox"><span data-i18n="polar">Polar plot</span></label>
+        <label class="chk"><input id="micOn" type="checkbox"><span data-i18n="mic">Microphone: click the floor to place it</span></label>
+      </div>
+      <div class="sec">
+        <h3 data-i18n="m_spl">SPL map</h3>
+        <div class="ctl"><label><span data-i18n="span">Range shown</span><output id="o_span"></output></label><input id="span" type="range" min="12" max="60" step="6"></div>
+      </div>
+      <div class="sec">
+        <h3 data-i18n="m_mol">Molecules</h3>
+        <div class="ctl"><label><span data-i18n="dots">Number</span><output id="o_n"></output></label><input id="n" type="range" min="1000" max="16000" step="500"></div>
+      </div>
+      <div class="sec">
+        <div class="note" id="formulas">λ = c / f · T = 1 / f · p = Σ w · D(θ, f) · e^(i(ωt − kr − ωτ)) / r</div>
+        <div class="note" data-i18n="credit">Inspired by Dan Russell's acoustics animations (Penn State), the PhET and Falstad simulations and the Meyer Sound seminar with Magu. Built from the physics, no third-party assets. Offline, single file.</div>
+      </div>
+    </div>
+  </aside>
+</main>
+<div class="help" id="help" hidden>
+  <div class="card">
+    <h2 data-i18n="keys">Keyboard</h2>
+    <table id="keysTable"></table>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="helpClose">OK</button></div>
+  </div>
+</div>
+<script>/* Sound Field Lab — physics. Pure functions, no DOM: loaded by the page and by the node tests.
+   Model: steady-state sine at frequency f. Every loudspeaker is a point source with a directivity
+   function, a gain, a delay and a polarity. The field at a point is the complex sum of all of them
+   (plus mirror-image sources for a reflecting boundary). First-order models, for teaching. */
+(function (root) {
+  'use strict';
+  const PI = Math.PI, DEG = PI / 180;
+
+  // ---------------- Maths ----------------
+  // Bessel J1 (Numerical Recipes rational approximation, |error| < 1e-8)
+  function bessj1(x) {
+    const ax = Math.abs(x);
+    if (ax < 8) {
+      const y = x * x;
+      const a1 = x * (72362614232.0 + y * (-7895059235.0 + y * (242396853.1 + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
+      const a2 = 144725228442.0 + y * (2300535178.0 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y))));
+      return a1 / a2;
+    }
+    const z = 8 / ax, y = z * z, xx = ax - 2.356194491;
+    const a1 = 1 + y * (0.183105e-2 + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
+    const a2 = 0.04687499995 + y * (-0.2002690873e-3 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
+    const ans = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * a1 - z * Math.sin(xx) * a2);
+    return x < 0 ? -ans : ans;
+  }
+
+  // ---------------- Media ----------------
+  // Air absorption, ISO 9613-1:1993, at 101.325 kPa. f in Hz, T in °C, RH in %. Returns dB/m.
+  function isoAbsorption(f, T, RH) {
+    const Tk = T + 273.15, T0 = 293.15, T01 = 273.16;
+    const psat = Math.pow(10, -6.8346 * Math.pow(T01 / Tk, 1.261) + 4.6151);
+    const h = RH * psat;                                   // molar concentration of water vapour, %
+    const frO = 24 + 4.04e4 * h * (0.02 + h) / (0.391 + h);
+    const frN = Math.pow(Tk / T0, -0.5) * (9 + 280 * h * Math.exp(-4.170 * (Math.pow(Tk / T0, -1 / 3) - 1)));
+    const f2 = f * f;
+    return 8.686 * f2 * (1.84e-11 * Math.sqrt(Tk / T0) + Math.pow(Tk / T0, -2.5) *
+      (0.01275 * Math.exp(-2239.1 / Tk) / (frO + f2 / frO) + 0.1068 * Math.exp(-3352 / Tk) / (frN + f2 / frN)));
+  }
+  // Sea water absorption, Thorp (f in kHz → dB/km), returned in dB/m
+  function thorp(f) {
+    const k2 = (f / 1000) * (f / 1000);
+    return (0.11 * k2 / (1 + k2) + 44 * k2 / (4100 + k2) + 2.75e-4 * k2 + 0.003) / 1000;
+  }
+  const gas = (c20, rho20) => ({ c: T => c20 * Math.sqrt((T + 273.15) / 293.15), rho: T => rho20 * 293.15 / (T + 273.15), alpha: () => 0, temp: [-20, 45] });
+  const MEDIA = {
+    // c = 331.4 + 0.607·T: Steve Bush, Audio Physics p. 12 (Meyer seminar material). ρ: ideal gas, dry air.
+    air:      { c: T => 331.4 + 0.607 * T, rho: T => 101325 / (287.05 * (T + 273.15)), alpha: isoAbsorption, temp: [-20, 45], hum: true },
+    helium:   gas(1007.9, 0.1664),        // √(γRT/M), γ = 5/3, M = 4.003 g/mol
+    hydrogen: gas(1303, 0.0838),
+    co2:      gas(267.2, 1.842),          // also the cold fog of dry ice
+    // fresh water: Marczak (1997) polynomial; viscous absorption ≈ 2.2e-13·f² dB/m
+    water:    { c: T => 1402.385 + 5.038813 * T - 5.799136e-2 * T * T + 3.287156e-4 * T ** 3 - 1.398845e-6 * T ** 4 + 2.78786e-9 * T ** 5,
+                rho: () => 998.2, alpha: f => 2.2e-13 * f * f, temp: [0, 40] },
+    // sea water, salinity 35 ‰, surface: Medwin (1975)
+    seawater: { c: T => 1449.2 + 4.6 * T - 0.055 * T * T + 0.00029 * T ** 3, rho: () => 1025, alpha: thorp, temp: [0, 35] },
+    steel:    { c: () => 5960, rho: () => 7850, alpha: () => 0 },     // longitudinal waves in bulk steel
+    custom:   { c: null, rho: () => 1.2, alpha: () => 0 },
+  };
+
+  // ---------------- Loudspeaker elements ----------------
+  // size = [depth along the aim, width, height] in metres; the acoustic centre is the middle of the front face.
+  // dir(k, f, cosθ, sinθ) → directivity (signed: a dipole radiates inverted behind). plan / section variants
+  // when the horizontal and vertical behaviour differ (line array element, column).
+  const baffle = (ka, c) => { const q = 1 / (1 + ka * ka); return q + (1 - q) * (1 + c) / 2; };  // omni → front hemisphere
+  const horn = (c, cov) => {                    // constant-directivity horn, −6 dB at ±cov/2
+    if (c <= 0) return 0.03;
+    const n = Math.log(0.5) / Math.log(Math.cos(cov * DEG / 2));
+    return Math.max(0.03, Math.pow(c, n));
+  };
+  const sinc = x => Math.abs(x) < 1e-6 ? 1 : Math.sin(x) / x;
+  const piston = v => Math.abs(v) < 1e-6 ? 1 : 2 * bessj1(v) / v;
+  const hfw = (f, fx) => f * f / (f * f + fx * fx);   // weight of the high-frequency part around a crossover fx
+  const ELEMENTS = {
+    point:   { size: [0, 0, 0], dir: () => 1 },
+    sub:     { size: [0.75, 0.6, 0.55], dir: (k, f, c) => baffle(k * 0.23, c) },                 // 18-inch in a box
+    cardsub: { size: [0.9, 0.6, 0.55], dir: (k, f, c) => 0.5 + 0.5 * c },                       // self-cardioid sub (rear drivers + DSP)
+    box:     { size: [0.4, 0.4, 0.65], dir: (k, f, c, s) => {                                     // 12-inch + 90° horn, crossover 1.2 kHz
+      const lf = baffle(k * 0.15, c) * piston(k * 0.15 * s), w = hfw(f, 1200);
+      return (1 - w) * lf + w * horn(c, 90);
+    } },
+    line:    { size: [0.55, 1.0, 0.35],                                                           // line array element
+      plan: (k, f, c) => { const w = hfw(f, 500); return (1 - w) * baffle(k * 0.25, c) + w * horn(c, 110); },
+      section: (k, f, c, s) => baffle(k * 0.2, c) * sinc(k * 0.175 * s) },                        // 35 cm tall line source
+    column:  { size: [0.12, 0.12, 1.2],
+      plan: (k, f, c) => { const w = hfw(f, 2000); return (1 - w) * baffle(k * 0.06, c) + w * horn(c, 150); },
+      section: (k, f, c, s) => baffle(k * 0.06, c) * sinc(k * 0.6 * s) },                         // 1.2 m tall column
+    dipole:  { size: [0.06, 0.6, 0.9], dir: (k, f, c) => c },                                    // open baffle: figure of eight
+  };
+  const dirFn = (type, plane) => { const E = ELEMENTS[type] || ELEMENTS.point; return plane === 'section' && E.section ? E.section : (E.plan || E.dir); };
+
+  // ---------------- Installations ----------------
+  // Every generator returns elements { x, y, aim (rad, 0 = +x), gain (dB), delay (s), pol (±1), type }.
+  // Delays are computed with the speed of sound of the medium you are in (as a system tech would set them).
+  const INSTALLS = {
+    single:   { params: [], def: {}, elem: 'box' },
+    line:     { params: ['n', 'spacing'], def: { n: 8, spacing: 1.2 }, elem: 'sub' },
+    arc:      { params: ['n', 'spacing', 'angle'], def: { n: 8, spacing: 1.2, angle: 60 }, elem: 'sub' },
+    arcdelay: { params: ['n', 'spacing', 'angle'], def: { n: 8, spacing: 1.2, angle: 60 }, elem: 'sub' },
+    gradient: { params: ['n', 'spacing', 'depth', 'rear'], def: { n: 1, spacing: 1.2, depth: 1.35, rear: 0 }, elem: 'sub' },
+    invstack: { params: ['n', 'spacing', 'depth', 'rear'], def: { n: 1, spacing: 1.2, depth: 0.75, rear: 0 }, elem: 'sub' },
+    endfire:  { params: ['n', 'depth'], def: { n: 4, depth: 1.07 }, elem: 'sub' },
+    lr:       { params: ['width'], def: { width: 12 }, elem: 'sub' },
+    uni:      { params: ['n', 'depth', 'width', 'angle'], def: { n: 4, depth: 1.07, width: 12, angle: 10 }, elem: 'sub' },
+    steer:    { params: ['n', 'spacing', 'angle'], def: { n: 12, spacing: 0.5, angle: 20 }, elem: 'box' },
+    jarray:   { params: ['n', 'angle'], def: { n: 12, angle: 30 }, elem: 'line', plane: 'section' },
+    delay:    { params: ['dist'], def: { dist: 20 }, elem: 'box' },
+  };
+  const PARAM_RANGE = { n: [1, 24, 1], spacing: [0.1, 6, 0.05], depth: [0.1, 4, 0.01], rear: [-12, 6, 0.5],
+                        angle: [-80, 120, 1], width: [1, 40, 0.5], dist: [2, 80, 0.5] };
+
+  function layout(inst, p, type, c) {
+    const E = (x, y, aim, extra) => Object.assign({ x, y, aim, gain: 0, delay: 0, pol: 1, type, mute: false }, extra || {});
+    const out = [], n = Math.max(1, Math.round(p.n || 1));
+    const across = (i, s) => (i - (n - 1) / 2) * s;           // positions centred on y = 0
+    switch (inst) {
+      case 'line': for (let i = 0; i < n; i++) out.push(E(0, across(i, p.spacing), 0)); break;
+      case 'arc': {                                              // physical arc: centre forward, edges back, aimed radially
+        const A = p.angle * DEG, d = n > 1 ? A / (n - 1) : 0;
+        if (Math.abs(d) < 1e-6) { for (let i = 0; i < n; i++) out.push(E(0, across(i, p.spacing), 0)); break; }
+        const R = p.spacing / (2 * Math.sin(Math.abs(d) / 2)) * Math.sign(d);
+        for (let i = 0; i < n; i++) { const phi = -A / 2 + i * d; out.push(E(R * (Math.cos(phi) - 1), R * Math.sin(phi), phi)); }
+        break; }
+      case 'arcdelay': {                                         // straight line, edges delayed as if they were on the arc
+        const L = (n - 1) * p.spacing, A = p.angle * DEG;
+        const R = Math.abs(A) > 1e-6 ? (L / 2) / Math.sin(Math.abs(A) / 2) : Infinity;
+        for (let i = 0; i < n; i++) { const y = across(i, p.spacing); out.push(E(0, y, 0, { delay: isFinite(R) ? (R - Math.sqrt(Math.max(0, R * R - y * y))) / c : 0 })); }
+        break; }
+      case 'gradient':                                           // rear sub facing forward, inverted, delayed by depth / c
+        for (let i = 0; i < n; i++) { const y = across(i, p.spacing); out.push(E(0, y, 0)); out.push(E(-p.depth, y, 0, { pol: -1, delay: p.depth / c, gain: p.rear })); }
+        break;
+      case 'invstack':                                           // rear sub turned backwards, inverted, delayed
+        for (let i = 0; i < n; i++) { const y = across(i, p.spacing); out.push(E(0, y, 0)); out.push(E(-p.depth, y, PI, { pol: -1, delay: p.depth / c, gain: p.rear })); }
+        break;
+      case 'endfire':                                            // in line along the axis, front ones delayed
+        for (let i = 0; i < n; i++) out.push(E(-i * p.depth, 0, 0, { delay: (n - 1 - i) * p.depth / c }));
+        break;
+      case 'lr': out.push(E(0, -p.width / 2, 0)); out.push(E(0, p.width / 2, 0)); break;
+      case 'uni':                                                // two end-fire lines on the wings, splayed outwards
+        for (const sg of [-1, 1]) {
+          const a = sg * p.angle * DEG, ax = Math.cos(a), ay = Math.sin(a);
+          for (let i = 0; i < n; i++) out.push(E(-i * p.depth * ax, sg * p.width / 2 - i * p.depth * ay, a, { delay: (n - 1 - i) * p.depth / c }));
+        }
+        break;
+      case 'steer': {                                            // straight line, linear delay ramp: beam steered by angle
+        const s = Math.sin(p.angle * DEG), ys = []; for (let i = 0; i < n; i++) ys.push(across(i, p.spacing));
+        const m = Math.min(...ys.map(y => y * s));
+        for (const y of ys) out.push(E(0, y, 0, { delay: (y * s - m) / c }));
+        break; }
+      case 'jarray': {                                           // flown line array, vertical section, J curve (y down)
+        const h = ELEMENTS.line.size[2], tot = p.angle * DEG, w = []; let sw = 0;
+        for (let i = 0; i < n - 1; i++) { w.push(i + 1); sw += i + 1; }
+        let a = 0, px = 0, py = 0;
+        for (let i = 0; i < n; i++) {
+          const dx = Math.sin(a), dy = -Math.cos(a);             // face direction, downwards (y up here)
+          out.push(E(px + dx * h / 2, py + dy * h / 2, a));
+          px += dx * h; py += dy * h; if (i < n - 1) a -= sw ? tot * w[i] / sw : 0;
+        }
+        const cy = out.reduce((s, e) => s + e.y, 0) / n;
+        for (const e of out) { e.y = -(e.y - cy); e.aim = -e.aim; }   // screen convention: y grows downwards
+        break; }
+      case 'delay': out.push(E(0, 0, 0)); out.push(E(p.dist, 0, 0, { delay: p.dist / c })); break;
+      default: out.push(E(0, 0, 0));
+    }
+    return { elements: out, plane: (INSTALLS[inst] && INSTALLS[inst].plane) || 'plan' };
+  }
+
+  // ---------------- Field ----------------
+  // Sources with complex weights w = gain · polarity · e^(−iωτ); a boundary adds mirror images (× reflection).
+  function buildSources(elements, plane, boundary, f) {
+    const list = [];
+    let wsum = 0, cx = 0, cy = 0, nn = 0, minX = Infinity, maxY = -Infinity;
+    for (const e of elements) {
+      const sz = (ELEMENTS[e.type] || ELEMENTS.point).size;
+      minX = Math.min(minX, e.x - sz[0] - 0.1); maxY = Math.max(maxY, e.y + sz[1] / 2 + 0.1);
+      if (e.mute) continue;
+      const g = Math.pow(10, e.gain / 20), ph = -2 * PI * f * e.delay;
+      list.push({ x: e.x, y: e.y, ca: Math.cos(e.aim), sa: Math.sin(e.aim), wr: g * e.pol * Math.cos(ph), wi: g * e.pol * Math.sin(ph),
+                  type: e.type, size: sz, dir: dirFn(e.type, plane), img: false });
+      wsum += g; cx += e.x; cy += e.y; nn++;
+    }
+    let wall = null;
+    if (boundary && boundary.kind !== 'none' && list.length) {
+      const R = boundary.refl;
+      if (boundary.kind === 'back') { const X = minX - boundary.dist; wall = { kind: 'back', at: X };
+        for (const s of list.slice()) list.push(Object.assign({}, s, { x: 2 * X - s.x, ca: -s.ca, wr: s.wr * R, wi: s.wi * R, img: true })); }
+      else { const Y = maxY + boundary.dist; wall = { kind: 'side', at: Y };
+        for (const s of list.slice()) list.push(Object.assign({}, s, { y: 2 * Y - s.y, sa: -s.sa, wr: s.wr * R, wi: s.wi * R, img: true })); }
+    }
+    return { list, wsum: wsum || 1, cx: nn ? cx / nn : 0, cy: nn ? cy / nn : 0, wall };
+  }
+
+  // Evaluate at n points (P3 = x, y, z triples). 9 floats per point:
+  // displacement U (x, y, z as re, im) · pressure P (re, im) · q (normalisation for colours). NaN in P.re = not drawn
+  // (inside a cabinet, a point source or a wall). Over time: s = Re(U·e^(iφ)), p = Im(P·e^(iφ)).
+  // law 'visual': amplitude ∝ max(0.3, √(2r0/r)) keeps the far field readable (as in the original app);
+  // law 'physical': 1/r spreading, for levels in dB. Absorption (dB/m) applies to both.
+  function evaluate(S, P3, n, o) {
+    const out = new Float32Array(9 * n), list = S.list, k = o.k, f = o.f, vis = o.law === 'visual', r0 = o.r0 || 0.05;
+    const att = (o.alpha || 0) * Math.LN10 / 20;                  // Np/m
+    const spread = vis ? (r => Math.max(0.3, Math.sqrt(2 * r0 / Math.max(r, r0)))) : (r => 1 / Math.max(r, o.rmin || 0.1));
+    const W = S.wall;
+    for (let i = 0; i < n; i++) {
+      const x = P3[3 * i], y = P3[3 * i + 1], z = P3[3 * i + 2], q = 9 * i;
+      let inside = W ? (W.kind === 'back' ? x < W.at : y > W.at) : false;
+      let uxr = 0, uxi = 0, uyr = 0, uyi = 0, uzr = 0, uzi = 0, pr = 0, pi = 0;
+      if (!inside) for (const s of list) {
+        const dx = x - s.x, dy = y - s.y, r = Math.sqrt(dx * dx + dy * dy + z * z);
+        if (!s.img) {
+          if (s.size[0] === 0) { if (vis && r < r0 * 1.3) { inside = true; break; } }
+          else { const lx = dx * s.ca + dy * s.sa, ly = -dx * s.sa + dy * s.ca;
+                 if (lx < 0 && lx > -s.size[0] && Math.abs(ly) < s.size[1] / 2 && Math.abs(z) < s.size[2] / 2) { inside = true; break; } }
+        }
+        const ir = 1 / Math.max(r, 1e-9), cth = (dx * s.ca + dy * s.sa) * ir, sth = Math.sqrt(Math.max(0, 1 - cth * cth));
+        const a = s.dir(k, f, cth, sth) * spread(r) * Math.exp(-att * r);
+        const cr = Math.cos(k * r), sr = -Math.sin(k * r);
+        const re = a * (s.wr * cr - s.wi * sr), im = a * (s.wr * sr + s.wi * cr);
+        uxr += re * dx * ir; uxi += im * dx * ir; uyr += re * dy * ir; uyi += im * dy * ir; uzr += re * z * ir; uzi += im * z * ir;
+        pr += re; pi += im;
+      }
+      if (inside) { out[q + 6] = NaN; continue; }
+      out[q] = uxr; out[q + 1] = uxi; out[q + 2] = uyr; out[q + 3] = uyi; out[q + 4] = uzr; out[q + 5] = uzi; out[q + 6] = pr; out[q + 7] = pi;
+      out[q + 8] = vis ? 1 / (S.wsum * spread(Math.hypot(x - S.cx, y - S.cy, z))) : 1;
+    }
+    return out;
+  }
+
+  // Level in dB around the centre of the system, at radius R, nAng directions (far field, physical law)
+  function polar(S, R, nAng, o) {
+    const P3 = new Float32Array(3 * nAng);
+    for (let i = 0; i < nAng; i++) { const a = 2 * PI * i / nAng; P3[3 * i] = S.cx + R * Math.cos(a); P3[3 * i + 1] = S.cy + R * Math.sin(a); }
+    const F = evaluate(S, P3, nAng, Object.assign({}, o, { law: 'physical' }));
+    const L = new Float32Array(nAng); let mx = -Infinity;
+    for (let i = 0; i < nAng; i++) { const v = Number.isNaN(F[9 * i + 6]) ? -Infinity : 20 * Math.log10(Math.hypot(F[9 * i + 6], F[9 * i + 7]) + 1e-12); L[i] = v; if (v > mx) mx = v; }
+    for (let i = 0; i < nAng; i++) L[i] -= mx;
+    return L;
+  }
+
+  const api = { PI, DEG, bessj1, isoAbsorption, thorp, MEDIA, ELEMENTS, INSTALLS, PARAM_RANGE, layout, buildSources, evaluate, polar, dirFn, horn, baffle };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SFP = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* Sound Field Lab — texts in English, Spanish and Italian. {x} are placeholders filled by the app. */
+const I18N = {
+  en: {
+    subtitle: 'Every dot is one air molecule in a million', examples: 'Examples', readings: 'Readings',
+    r_f: 'Frequency', r_T: 'Period', r_v: 'On screen', r_c: 'Speed of sound', r_l: 'Wavelength', r_z: 'Impedance ρc',
+    r_a: 'Absorption', r_s: 'Screen width', r_sys: 'System', r_mic: 'Microphone',
+    m_mol: 'Molecules', m_rip: 'Pressure', m_spl: 'SPL map', m_surf: 'Surface', m_block: 'Air block',
+    c_top: 'Top', c_low: 'Low', fit4: 'Fit 4 λ', fitscene: 'Fit scene', fit4l: 'Fit 4 wavelengths',
+    legend: 'Level (dB, relative to the loudest point)', hint: 'Drag to rotate · double-click resets · ? for keys',
+    t_signal: 'Signal', t_speakers: 'Speakers', t_medium: 'Medium', t_view: 'View',
+    freq: 'Frequency', motion: 'Motion', amp: 'Amplitude', speed: 'Animation speed', tp: 'Time period follows frequency',
+    scale: 'Scale', lock: 'Keep screen scale when frequency changes',
+    install: 'Installation', params: 'Layout', element: 'Loudspeaker', proc: 'Processing per element',
+    procnote: 'Gain, delay and polarity of each box, as in a system processor. Editing a value makes the layout custom.',
+    procreset: 'Back to the installation defaults', boundary: 'Boundary', bdist: 'Distance from the system', brefl: 'Reflection',
+    medium: 'Medium', temp: 'Temperature', hum: 'Relative humidity', customc: 'Speed of sound',
+    absorb: 'Include absorption (air: ISO 9613-1)', medinfo: 'At this frequency',
+    show: 'Show', color: 'Colour by pressure (green +, red −)', hl: 'Highlight one molecule', labels: 'Delay and polarity labels',
+    polar: 'Polar plot', mic: 'Microphone: click the floor to place it', span: 'Range shown', dots: 'Number',
+    credit: "Inspired by Dan Russell's acoustics animations (Penn State), the PhET and Falstad simulations and the Meyer Sound seminar with Magu. Built from the physics, no third-party assets. Offline, single file.",
+    keys: 'Keyboard', cycle: 'cycle', capped: 'capped, too fast to show', play: 'Play', pause: 'Pause',
+    speednote: 'Slow motion only: frequency changes the geometry (wavelength), this changes how fast you watch it.',
+    speednote_tp: 'Time period on: higher frequency, faster cycle. One slow-motion factor for every frequency, set at 100 Hz.',
+    toofine: 'Too many wavelengths on screen: press F (fit 4 λ) or reduce the screen width',
+    sys: '{n} × {e} · {len}', sys1: '1 × {e}', mic_ro: '{db} dB re 1 box at 1 m · {ph}°', custom: 'custom',
+    polar_t: 'Polar at {r} · {f}', section: 'Vertical section (up ↑)', plan: 'Plan view',
+    th_n: '#', th_g: 'dB', th_d: 'ms', th_p: 'Pol', th_m: 'On',
+    // installations
+    i_single: 'Single', i_line: 'Straight line', i_arc: 'Arc', i_arcdelay: 'Arc delay', i_gradient: 'Gradient (cardioid)',
+    i_invstack: 'Inverted stack', i_endfire: 'End-fire', i_lr: 'Left / right', i_uni: 'End-fire wings', i_steer: 'Steered line',
+    i_jarray: 'Line array (J)', i_delay: 'Delay speaker', i_custom: 'Custom',
+    n_single: 'One loudspeaker. Change the type below to compare a point source, a sub, a full-range box or a dipole.',
+    n_line: 'Boxes side by side, all at the same time: narrow beam in front, lobes and nulls off axis when the spacing is large compared with λ.',
+    n_arc: 'Boxes on a physical arc, centre forward and aimed outwards: the coverage widens with the angle.',
+    n_arcdelay: 'Straight line with the edges delayed as if they stood on the arc: same coverage as the physical arc, no truck space needed. Edge delay {d}.',
+    n_gradient: 'Rear sub facing forward, polarity inverted, delayed by depth / c = {d}. Cancels behind; front sum best at f = c / 4d = {f}.',
+    n_invstack: 'Rear sub turned backwards, inverted and delayed by {d}: the classic cardioid stack.',
+    n_endfire: 'Subs in line along the axis, the front ones delayed by spacing / c ({d} each): everything adds in front, little goes back.',
+    n_lr: 'Two sources far apart playing the same signal: the "power alley" in the middle and the comb of nulls across the room.',
+    n_uni: 'Two end-fire lines on the wings, splayed outwards: directional low end without a centre cluster.',
+    n_steer: 'Straight line with a linear delay ramp: the beam turns by the angle without moving a box. Watch for grating lobes when the spacing passes λ/2.',
+    n_jarray: 'Flown line array seen from the side: straight on top for the far throw, curved at the bottom for the front rows.',
+    n_delay: 'Main system and a delay loudspeaker {dist} downstream, delayed by {d} so they arrive together.',
+    n_custom: 'You edited the processing: the layout keeps your values.',
+    p_n: 'Elements', p_spacing: 'Spacing', p_depth: 'Depth (front to rear)', p_rear: 'Rear gain', p_angle: 'Angle',
+    p_width: 'Distance between sides', p_dist: 'Distance', p_angle_steer: 'Steering angle', p_angle_j: 'Total splay',
+    p_angle_uni: 'Splay outwards', p_n_ef: 'Elements per line', p_depth_ef: 'Spacing along the axis',
+    // elements
+    e_point: 'Point', e_sub: 'Sub 18"', e_cardsub: 'Cardioid sub', e_box: 'Full range 12"', e_line: 'Line array box',
+    e_column: 'Column', e_dipole: 'Dipole',
+    en_point: 'Ideal simple source: the same in every direction.',
+    en_sub: 'Box with one 18-inch driver: omnidirectional when the wavelength is large, more forward at the top of its band.',
+    en_cardsub: 'Self-cardioid sub (rear drivers and processing inside the box): about 6 dB down at 90°, deep null behind.',
+    en_box: '12-inch woofer and 90° horn, crossover 1.2 kHz: wide in the low mids, constant 90° above the crossover.',
+    en_line: 'Line array element: 110° horizontal; in the vertical section it is a 35 cm line source.',
+    en_column: 'Column of small drivers, 1.2 m tall: wide horizontally, narrow vertically.',
+    en_dipole: 'Open baffle: front and back in opposite polarity, nulls on the sides.',
+    ka: 'ka = {ka}',
+    // boundary
+    b_none: 'Free field', b_back: 'Wall behind', b_side: 'Side wall', b_floor: 'Floor',
+    // media
+    md_air: 'Air', md_helium: 'Helium', md_hydrogen: 'Hydrogen', md_co2: 'CO₂ / dry-ice fog', md_water: 'Water', md_seawater: 'Sea water',
+    md_steel: 'Steel', md_custom: 'Custom',
+    mn_air: 'c = 331.4 + 0.607·T (Steve Bush, Audio Physics). Absorption from ISO 9613-1 with temperature and humidity.',
+    mn_helium: 'Light gas: sound travels about three times faster, wavelengths are three times longer.',
+    mn_hydrogen: 'The lightest gas: almost four times faster than air.',
+    mn_co2: 'Heavy gas, slower than air: the cold fog of dry ice bends and slows the sound that crosses it.',
+    mn_water: 'About 4.3 times faster than air and 3600 times higher impedance: almost no sound crosses from air to water.',
+    mn_seawater: 'Salinity 35 ‰: a little faster than fresh water. Absorption by Thorp.',
+    mn_steel: 'Longitudinal waves in bulk steel: about 17 times faster than air.',
+    mn_custom: 'Choose any speed of sound.',
+    medinfo_t: 'λ = <b>{l}</b> · c = <b>{c}</b> · ρ = <b>{rho}</b> · Z = ρc = <b>{z}</b><br>Absorption: <b>{a}</b> · over 100 m: <b>{a100}</b>',
+    // examples
+    ex_simple: 'Simple source', exd_simple: 'The original: one molecule in a million around a point source',
+    ex_beam: 'Loudspeaker beaming', exd_beam: 'Full-range box at 2 kHz: 90° horn coverage',
+    ex_comb: 'Two boxes: comb filter', exd_comb: 'Two full-range boxes 3 m apart at 1 kHz',
+    ex_alley: 'Power alley', exd_alley: 'Left/right subs 12 m apart at 63 Hz',
+    ex_gradient: 'Cardioid gradient', exd_gradient: '1.35 m, 3.93 ms, rear inverted at 63 Hz',
+    ex_invstack: 'Inverted stack', exd_invstack: 'Rear box turned back at 63 Hz',
+    ex_endfire: 'End-fire 4 subs', exd_endfire: '1.07 m, 0 / 3.1 / 6.2 / 9.3 ms at 80 Hz',
+    ex_arc: 'Physical arc', exd_arc: '8 subs on a 60° arc at 80 Hz',
+    ex_arcdelay: 'Arc delay', exd_arcdelay: 'Same 8 subs in a straight line, delayed like the arc',
+    ex_steer: 'Steered line', exd_steer: '12 boxes, 20° steering by delay at 1 kHz',
+    ex_jarray: 'Line array J', exd_jarray: '12 elements, 30° total splay, vertical section, 1 kHz',
+    ex_wall: 'Sub near a wall', exd_wall: 'One sub 1 m from a wall behind at 63 Hz',
+    ex_delay: 'Delay tower', exd_delay: 'Main and delay 20 m apart at 250 Hz',
+    ex_helium: 'Helium vs air', exd_helium: 'The same 1 kHz source in helium',
+    ex_water: 'Under water', exd_water: '1 kHz in water: longer wavelength',
+    ex_dipole: 'Dipole', exd_dipole: 'Open baffle at 200 Hz: nulls on the sides',
+    // keys
+    k_freq: 'Frequency by a semitone (Shift: an octave)', k_space: 'Pause / play', k_f: 'Fit 4 wavelengths', k_g: 'Fit the scene',
+    k_t: 'Time period on / off', k_modes: 'Molecules · pressure · SPL · surface · air block', k_c: 'Camera: top · 45° · low',
+    k_m: 'Microphone on / off', k_drag: 'Drag: rotate (double-click: back to 45°)', k_help: 'This help',
+  },
+  es: {
+    subtitle: 'Cada punto es una molécula de aire entre un millón', examples: 'Ejemplos', readings: 'Lecturas',
+    r_f: 'Frecuencia', r_T: 'Período', r_v: 'En pantalla', r_c: 'Velocidad del sonido', r_l: 'Longitud de onda', r_z: 'Impedancia ρc',
+    r_a: 'Absorción', r_s: 'Ancho de pantalla', r_sys: 'Sistema', r_mic: 'Micrófono',
+    m_mol: 'Moléculas', m_rip: 'Presión', m_spl: 'Mapa SPL', m_surf: 'Superficie', m_block: 'Bloque de aire',
+    c_top: 'Arriba', c_low: 'Bajo', fit4: 'Ajustar 4 λ', fitscene: 'Ajustar escena', fit4l: 'Ajustar 4 longitudes de onda',
+    legend: 'Nivel (dB, relativo al punto más fuerte)', hint: 'Arrastra para girar · doble clic reinicia · ? para teclas',
+    t_signal: 'Señal', t_speakers: 'Altavoces', t_medium: 'Medio', t_view: 'Vista',
+    freq: 'Frecuencia', motion: 'Movimiento', amp: 'Amplitud', speed: 'Velocidad de animación', tp: 'El período sigue la frecuencia',
+    scale: 'Escala', lock: 'Mantener la escala al cambiar la frecuencia',
+    install: 'Instalación', params: 'Disposición', element: 'Altavoz', proc: 'Procesamiento por elemento',
+    procnote: 'Ganancia, delay y polaridad de cada caja, como en un procesador de sistema. Al editar un valor la disposición pasa a personalizada.',
+    procreset: 'Volver a los valores de la instalación', boundary: 'Superficie', bdist: 'Distancia del sistema', brefl: 'Reflexión',
+    medium: 'Medio', temp: 'Temperatura', hum: 'Humedad relativa', customc: 'Velocidad del sonido',
+    absorb: 'Incluir absorción (aire: ISO 9613-1)', medinfo: 'A esta frecuencia',
+    show: 'Mostrar', color: 'Color por presión (verde +, rojo −)', hl: 'Resaltar una molécula', labels: 'Etiquetas de delay y polaridad',
+    polar: 'Diagrama polar', mic: 'Micrófono: haz clic en el suelo para colocarlo', span: 'Rango mostrado', dots: 'Cantidad',
+    credit: 'Inspirado en las animaciones de acústica de Dan Russell (Penn State), en las simulaciones PhET y Falstad y en el seminario de Meyer Sound con Magu. Hecho desde la física, sin material de terceros. Sin conexión, un solo archivo.',
+    keys: 'Teclado', cycle: 'ciclo', capped: 'limitado, demasiado rápido para mostrar', play: 'Reproducir', pause: 'Pausa',
+    speednote: 'Solo cámara lenta: la frecuencia cambia la geometría (longitud de onda), esto cambia la rapidez con que la ves.',
+    speednote_tp: 'Período activado: más frecuencia, ciclo más rápido. Un solo factor de cámara lenta para todas las frecuencias, fijado a 100 Hz.',
+    toofine: 'Demasiadas longitudes de onda en pantalla: pulsa F (ajustar 4 λ) o reduce el ancho',
+    sys: '{n} × {e} · {len}', sys1: '1 × {e}', mic_ro: '{db} dB re 1 caja a 1 m · {ph}°', custom: 'personalizado',
+    polar_t: 'Polar a {r} · {f}', section: 'Sección vertical (arriba ↑)', plan: 'Planta',
+    th_n: '#', th_g: 'dB', th_d: 'ms', th_p: 'Pol', th_m: 'On',
+    i_single: 'Única', i_line: 'Línea recta', i_arc: 'Arco', i_arcdelay: 'Arco por delay', i_gradient: 'Gradiente (cardioide)',
+    i_invstack: 'Stack invertido', i_endfire: 'End-fire', i_lr: 'Izquierda / derecha', i_uni: 'Alas end-fire', i_steer: 'Línea direccionada',
+    i_jarray: 'Line array (J)', i_delay: 'Torre de delay', i_custom: 'Personalizada',
+    n_single: 'Un altavoz. Cambia el tipo abajo para comparar una fuente puntual, un sub, una caja de rango completo o un dipolo.',
+    n_line: 'Cajas lado a lado, todas al mismo tiempo: haz estrecho al frente, lóbulos y nulos fuera de eje cuando la separación es grande respecto a λ.',
+    n_arc: 'Cajas en un arco físico, el centro adelante y apuntadas hacia afuera: la cobertura se abre con el ángulo.',
+    n_arcdelay: 'Línea recta con los extremos retrasados como si estuvieran en el arco: misma cobertura que el arco físico. Delay de los extremos {d}.',
+    n_gradient: 'Sub trasero mirando al frente, polaridad invertida, retrasado profundidad / c = {d}. Cancela detrás; suma máxima al frente a f = c / 4d = {f}.',
+    n_invstack: 'Sub trasero girado hacia atrás, invertido y retrasado {d}: el clásico stack cardioide.',
+    n_endfire: 'Subs en línea sobre el eje, los delanteros retrasados separación / c ({d} cada uno): todo suma al frente, poco va hacia atrás.',
+    n_lr: 'Dos fuentes separadas con la misma señal: el "power alley" en el centro y el peine de nulos a lo ancho de la sala.',
+    n_uni: 'Dos líneas end-fire en las alas, abiertas hacia afuera: graves direccionales sin cluster central.',
+    n_steer: 'Línea recta con una rampa lineal de delay: el haz gira sin mover ninguna caja. Cuidado con los lóbulos de rejilla cuando la separación supera λ/2.',
+    n_jarray: 'Line array colgado visto de lado: recto arriba para el tiro largo, curvo abajo para las primeras filas.',
+    n_delay: 'Sistema principal y un altavoz de delay {dist} más adelante, retrasado {d} para que lleguen juntos.',
+    n_custom: 'Editaste el procesamiento: la disposición conserva tus valores.',
+    p_n: 'Elementos', p_spacing: 'Separación', p_depth: 'Profundidad (frente a fondo)', p_rear: 'Ganancia trasera', p_angle: 'Ángulo',
+    p_width: 'Distancia entre lados', p_dist: 'Distancia', p_angle_steer: 'Ángulo de direccionamiento', p_angle_j: 'Apertura total',
+    p_angle_uni: 'Apertura hacia afuera', p_n_ef: 'Elementos por línea', p_depth_ef: 'Separación sobre el eje',
+    e_point: 'Punto', e_sub: 'Sub 18"', e_cardsub: 'Sub cardioide', e_box: 'Rango completo 12"', e_line: 'Caja de line array',
+    e_column: 'Columna', e_dipole: 'Dipolo',
+    en_point: 'Fuente simple ideal: igual en todas las direcciones.',
+    en_sub: 'Caja con un driver de 18 pulgadas: omnidireccional cuando la longitud de onda es grande, más hacia adelante en lo alto de su banda.',
+    en_cardsub: 'Sub cardioide en una sola caja (drivers traseros y procesamiento interno): unos 6 dB menos a 90°, nulo profundo detrás.',
+    en_box: 'Woofer de 12 pulgadas y bocina de 90°, cruce a 1,2 kHz: amplio en medios graves, 90° constantes por encima del cruce.',
+    en_line: 'Elemento de line array: 110° horizontal; en la sección vertical es una fuente lineal de 35 cm.',
+    en_column: 'Columna de drivers pequeños, 1,2 m de alto: amplia en horizontal, estrecha en vertical.',
+    en_dipole: 'Pantalla abierta: frente y fondo en polaridad opuesta, nulos a los lados.',
+    ka: 'ka = {ka}',
+    b_none: 'Campo libre', b_back: 'Pared detrás', b_side: 'Pared lateral', b_floor: 'Suelo',
+    md_air: 'Aire', md_helium: 'Helio', md_hydrogen: 'Hidrógeno', md_co2: 'CO₂ / humo de hielo seco', md_water: 'Agua', md_seawater: 'Agua de mar',
+    md_steel: 'Acero', md_custom: 'Personalizado',
+    mn_air: 'c = 331,4 + 0,607·T (Steve Bush, Audio Physics). Absorción según ISO 9613-1 con temperatura y humedad.',
+    mn_helium: 'Gas ligero: el sonido viaja unas tres veces más rápido, las longitudes de onda son tres veces más largas.',
+    mn_hydrogen: 'El gas más ligero: casi cuatro veces más rápido que el aire.',
+    mn_co2: 'Gas pesado, más lento que el aire: el humo frío del hielo seco curva y frena el sonido que lo cruza.',
+    mn_water: 'Unas 4,3 veces más rápido que el aire y 3600 veces más impedancia: casi nada de sonido pasa del aire al agua.',
+    mn_seawater: 'Salinidad 35 ‰: un poco más rápido que el agua dulce. Absorción según Thorp.',
+    mn_steel: 'Ondas longitudinales en acero: unas 17 veces más rápido que el aire.',
+    mn_custom: 'Elige cualquier velocidad del sonido.',
+    medinfo_t: 'λ = <b>{l}</b> · c = <b>{c}</b> · ρ = <b>{rho}</b> · Z = ρc = <b>{z}</b><br>Absorción: <b>{a}</b> · en 100 m: <b>{a100}</b>',
+    ex_simple: 'Fuente simple', exd_simple: 'El original: una molécula entre un millón alrededor de una fuente puntual',
+    ex_beam: 'Directividad de una caja', exd_beam: 'Caja de rango completo a 2 kHz: cobertura de bocina de 90°',
+    ex_comb: 'Dos cajas: filtro peine', exd_comb: 'Dos cajas separadas 3 m a 1 kHz',
+    ex_alley: 'Power alley', exd_alley: 'Subs izquierda/derecha separados 12 m a 63 Hz',
+    ex_gradient: 'Gradiente cardioide', exd_gradient: '1,35 m, 3,93 ms, trasero invertido a 63 Hz',
+    ex_invstack: 'Stack invertido', exd_invstack: 'Caja trasera girada a 63 Hz',
+    ex_endfire: 'End-fire 4 subs', exd_endfire: '1,07 m, 0 / 3,1 / 6,2 / 9,3 ms a 80 Hz',
+    ex_arc: 'Arco físico', exd_arc: '8 subs en un arco de 60° a 80 Hz',
+    ex_arcdelay: 'Arco por delay', exd_arcdelay: 'Los mismos 8 subs en línea recta, retrasados como el arco',
+    ex_steer: 'Línea direccionada', exd_steer: '12 cajas, 20° por delay a 1 kHz',
+    ex_jarray: 'Line array J', exd_jarray: '12 elementos, 30° de apertura, sección vertical, 1 kHz',
+    ex_wall: 'Sub cerca de una pared', exd_wall: 'Un sub a 1 m de una pared detrás a 63 Hz',
+    ex_delay: 'Torre de delay', exd_delay: 'Principal y delay a 20 m a 250 Hz',
+    ex_helium: 'Helio vs aire', exd_helium: 'La misma fuente de 1 kHz en helio',
+    ex_water: 'Bajo el agua', exd_water: '1 kHz en agua: longitud de onda más larga',
+    ex_dipole: 'Dipolo', exd_dipole: 'Pantalla abierta a 200 Hz: nulos a los lados',
+    k_freq: 'Frecuencia por semitono (Shift: una octava)', k_space: 'Pausa / reproducir', k_f: 'Ajustar 4 longitudes de onda', k_g: 'Ajustar la escena',
+    k_t: 'Período sí / no', k_modes: 'Moléculas · presión · SPL · superficie · bloque de aire', k_c: 'Cámara: arriba · 45° · baja',
+    k_m: 'Micrófono sí / no', k_drag: 'Arrastrar: girar (doble clic: volver a 45°)', k_help: 'Esta ayuda',
+  },
+  it: {
+    subtitle: 'Ogni punto è una molecola d’aria su un milione', examples: 'Esempi', readings: 'Letture',
+    r_f: 'Frequenza', r_T: 'Periodo', r_v: 'A schermo', r_c: 'Velocità del suono', r_l: 'Lunghezza d’onda', r_z: 'Impedenza ρc',
+    r_a: 'Assorbimento', r_s: 'Larghezza schermo', r_sys: 'Sistema', r_mic: 'Microfono',
+    m_mol: 'Molecole', m_rip: 'Pressione', m_spl: 'Mappa SPL', m_surf: 'Superficie', m_block: 'Blocco d’aria',
+    c_top: 'Alto', c_low: 'Basso', fit4: 'Adatta 4 λ', fitscene: 'Adatta scena', fit4l: 'Adatta 4 lunghezze d’onda',
+    legend: 'Livello (dB, rispetto al punto più forte)', hint: 'Trascina per ruotare · doppio clic riporta · ? per i tasti',
+    t_signal: 'Segnale', t_speakers: 'Diffusori', t_medium: 'Mezzo', t_view: 'Vista',
+    freq: 'Frequenza', motion: 'Movimento', amp: 'Ampiezza', speed: 'Velocità animazione', tp: 'Il periodo segue la frequenza',
+    scale: 'Scala', lock: 'Mantieni la scala quando cambia la frequenza',
+    install: 'Installazione', params: 'Disposizione', element: 'Diffusore', proc: 'Processing per elemento',
+    procnote: 'Guadagno, ritardo e polarità di ogni cassa, come in un processore di sistema. Modificando un valore la disposizione diventa personalizzata.',
+    procreset: 'Torna ai valori dell’installazione', boundary: 'Superficie', bdist: 'Distanza dal sistema', brefl: 'Riflessione',
+    medium: 'Mezzo', temp: 'Temperatura', hum: 'Umidità relativa', customc: 'Velocità del suono',
+    absorb: 'Includi l’assorbimento (aria: ISO 9613-1)', medinfo: 'A questa frequenza',
+    show: 'Mostra', color: 'Colore per pressione (verde +, rosso −)', hl: 'Evidenzia una molecola', labels: 'Etichette di ritardo e polarità',
+    polar: 'Diagramma polare', mic: 'Microfono: clic sul pavimento per posizionarlo', span: 'Intervallo mostrato', dots: 'Numero',
+    credit: 'Ispirato alle animazioni di acustica di Dan Russell (Penn State), alle simulazioni PhET e Falstad e al seminario Meyer Sound con Magu. Costruito dalla fisica, senza materiale di terzi. Offline, un solo file.',
+    keys: 'Tastiera', cycle: 'ciclo', capped: 'limitato, troppo veloce da mostrare', play: 'Avvia', pause: 'Pausa',
+    speednote: 'Solo rallentamento: la frequenza cambia la geometria (lunghezza d’onda), questo cambia quanto veloce la guardi.',
+    speednote_tp: 'Periodo attivo: più frequenza, ciclo più veloce. Un solo fattore di rallentamento per tutte le frequenze, fissato a 100 Hz.',
+    toofine: 'Troppe lunghezze d’onda sullo schermo: premi F (adatta 4 λ) o riduci la larghezza',
+    sys: '{n} × {e} · {len}', sys1: '1 × {e}', mic_ro: '{db} dB rispetto a 1 cassa a 1 m · {ph}°', custom: 'personalizzato',
+    polar_t: 'Polare a {r} · {f}', section: 'Sezione verticale (su ↑)', plan: 'Pianta',
+    th_n: '#', th_g: 'dB', th_d: 'ms', th_p: 'Pol', th_m: 'On',
+    i_single: 'Singolo', i_line: 'Linea dritta', i_arc: 'Arco', i_arcdelay: 'Arc delay', i_gradient: 'Gradiente (cardioide)',
+    i_invstack: 'Stack invertito', i_endfire: 'End-fire', i_lr: 'Sinistra / destra', i_uni: 'Ali end-fire', i_steer: 'Linea orientata',
+    i_jarray: 'Line array (J)', i_delay: 'Torre di ritardo', i_custom: 'Personalizzata',
+    n_single: 'Un diffusore. Cambia il tipo qui sotto per confrontare sorgente puntiforme, sub, cassa full range o dipolo.',
+    n_line: 'Casse affiancate, tutte nello stesso istante: fascio stretto davanti, lobi e nulli fuori asse quando la distanza è grande rispetto a λ.',
+    n_arc: 'Casse su un arco fisico, centro avanti e puntate verso l’esterno: la copertura si apre con l’angolo.',
+    n_arcdelay: 'Linea dritta con le estremità ritardate come se fossero sull’arco: stessa copertura dell’arco fisico. Ritardo agli estremi {d}.',
+    n_gradient: 'Sub posteriore rivolto avanti, polarità invertita, ritardato di profondità / c = {d}. Cancella dietro; davanti somma massima a f = c / 4d = {f}.',
+    n_invstack: 'Sub posteriore girato all’indietro, invertito e ritardato di {d}: il classico stack cardioide.',
+    n_endfire: 'Sub in fila lungo l’asse, quelli davanti ritardati di distanza / c ({d} ciascuno): tutto somma davanti, poco va indietro.',
+    n_lr: 'Due sorgenti lontane con lo stesso segnale: il "power alley" al centro e il pettine di nulli lungo la sala.',
+    n_uni: 'Due linee end-fire sulle ali, aperte verso l’esterno: basse direttive senza cluster centrale.',
+    n_steer: 'Linea dritta con una rampa lineare di ritardi: il fascio gira senza muovere le casse. Attenzione ai lobi di reticolo quando la distanza supera λ/2.',
+    n_jarray: 'Line array appeso visto di lato: dritto in alto per il tiro lungo, curvo in basso per le prime file.',
+    n_delay: 'Impianto principale e un diffusore di ritardo {dist} più avanti, ritardato di {d} perché arrivino insieme.',
+    n_custom: 'Hai modificato il processing: la disposizione tiene i tuoi valori.',
+    p_n: 'Elementi', p_spacing: 'Distanza', p_depth: 'Profondità (davanti-dietro)', p_rear: 'Guadagno posteriore', p_angle: 'Angolo',
+    p_width: 'Distanza tra i lati', p_dist: 'Distanza', p_angle_steer: 'Angolo di orientamento', p_angle_j: 'Apertura totale',
+    p_angle_uni: 'Apertura verso l’esterno', p_n_ef: 'Elementi per linea', p_depth_ef: 'Distanza lungo l’asse',
+    e_point: 'Punto', e_sub: 'Sub 18"', e_cardsub: 'Sub cardioide', e_box: 'Full range 12"', e_line: 'Cassa line array',
+    e_column: 'Colonna', e_dipole: 'Dipolo',
+    en_point: 'Sorgente semplice ideale: uguale in tutte le direzioni.',
+    en_sub: 'Cassa con un altoparlante da 18 pollici: omnidirezionale quando la lunghezza d’onda è grande, più in avanti in cima alla sua banda.',
+    en_cardsub: 'Sub cardioide in una sola cassa (altoparlanti posteriori e processing interno): circa 6 dB in meno a 90°, nullo profondo dietro.',
+    en_box: 'Woofer da 12 pollici e tromba da 90°, crossover a 1,2 kHz: largo sui medio-bassi, 90° costanti sopra il crossover.',
+    en_line: 'Elemento di line array: 110° in orizzontale; nella sezione verticale è una sorgente lineare di 35 cm.',
+    en_column: 'Colonna di piccoli altoparlanti, alta 1,2 m: larga in orizzontale, stretta in verticale.',
+    en_dipole: 'Pannello aperto: davanti e dietro in polarità opposta, nulli sui lati.',
+    ka: 'ka = {ka}',
+    b_none: 'Campo libero', b_back: 'Muro dietro', b_side: 'Muro laterale', b_floor: 'Pavimento',
+    md_air: 'Aria', md_helium: 'Elio', md_hydrogen: 'Idrogeno', md_co2: 'CO₂ / fumo di ghiaccio secco', md_water: 'Acqua', md_seawater: 'Acqua di mare',
+    md_steel: 'Acciaio', md_custom: 'Personalizzato',
+    mn_air: 'c = 331,4 + 0,607·T (Steve Bush, Audio Physics). Assorbimento secondo ISO 9613-1 con temperatura e umidità.',
+    mn_helium: 'Gas leggero: il suono va circa tre volte più veloce, le lunghezze d’onda sono tre volte più lunghe.',
+    mn_hydrogen: 'Il gas più leggero: quasi quattro volte più veloce dell’aria.',
+    mn_co2: 'Gas pesante, più lento dell’aria: il fumo freddo del ghiaccio secco piega e rallenta il suono che lo attraversa.',
+    mn_water: 'Circa 4,3 volte più veloce dell’aria e 3600 volte l’impedenza: quasi nessun suono passa dall’aria all’acqua.',
+    mn_seawater: 'Salinità 35 ‰: poco più veloce dell’acqua dolce. Assorbimento secondo Thorp.',
+    mn_steel: 'Onde longitudinali nell’acciaio: circa 17 volte più veloce dell’aria.',
+    mn_custom: 'Scegli qualunque velocità del suono.',
+    medinfo_t: 'λ = <b>{l}</b> · c = <b>{c}</b> · ρ = <b>{rho}</b> · Z = ρc = <b>{z}</b><br>Assorbimento: <b>{a}</b> · su 100 m: <b>{a100}</b>',
+    ex_simple: 'Sorgente semplice', exd_simple: 'L’originale: una molecola su un milione attorno a una sorgente puntiforme',
+    ex_beam: 'Direttività di una cassa', exd_beam: 'Cassa full range a 2 kHz: copertura della tromba a 90°',
+    ex_comb: 'Due casse: filtro a pettine', exd_comb: 'Due casse full range a 3 m a 1 kHz',
+    ex_alley: 'Power alley', exd_alley: 'Sub sinistra/destra a 12 m a 63 Hz',
+    ex_gradient: 'Gradiente cardioide', exd_gradient: '1,35 m, 3,93 ms, posteriore invertito a 63 Hz',
+    ex_invstack: 'Stack invertito', exd_invstack: 'Cassa posteriore girata a 63 Hz',
+    ex_endfire: 'End-fire 4 sub', exd_endfire: '1,07 m, 0 / 3,1 / 6,2 / 9,3 ms a 80 Hz',
+    ex_arc: 'Arco fisico', exd_arc: '8 sub su un arco di 60° a 80 Hz',
+    ex_arcdelay: 'Arc delay', exd_arcdelay: 'Gli stessi 8 sub in linea, ritardati come l’arco',
+    ex_steer: 'Linea orientata', exd_steer: '12 casse, 20° di orientamento con i ritardi a 1 kHz',
+    ex_jarray: 'Line array J', exd_jarray: '12 elementi, 30° di apertura, sezione verticale, 1 kHz',
+    ex_wall: 'Sub vicino a un muro', exd_wall: 'Un sub a 1 m da un muro dietro a 63 Hz',
+    ex_delay: 'Torre di ritardo', exd_delay: 'Principale e ritardo a 20 m a 250 Hz',
+    ex_helium: 'Elio contro aria', exd_helium: 'La stessa sorgente a 1 kHz nell’elio',
+    ex_water: 'Sott’acqua', exd_water: '1 kHz in acqua: lunghezza d’onda più lunga',
+    ex_dipole: 'Dipolo', exd_dipole: 'Pannello aperto a 200 Hz: nulli sui lati',
+    k_freq: 'Frequenza di un semitono (Shift: un’ottava)', k_space: 'Pausa / avvia', k_f: 'Adatta 4 lunghezze d’onda', k_g: 'Adatta la scena',
+    k_t: 'Periodo sì / no', k_modes: 'Molecole · pressione · SPL · superficie · blocco d’aria', k_c: 'Inquadratura: alto · 45° · bassa',
+    k_m: 'Microfono sì / no', k_drag: 'Trascina: ruota (doppio clic: torna a 45°)', k_help: 'Questo aiuto',
+  },
+};
+
+/* Sound Field Lab — application: state, rendering, interface. Physics in physics.js (SFP), texts in i18n.js. */
+(() => {
+  'use strict';
+  const P = window.SFP, PI = Math.PI, DEG = PI / 180;
+  const F_MIN = 20, F_MAX = 20000, W_MIN = 0.05, W_MAX = 200, F_REF = 100, MIN_CYCLE_S = 0.1;
+  const $ = id => document.getElementById(id);
+
+  // ---------------- State (persisted per viewer, never required) ----------------
+  const DEF = {
+    f: 1000, amp: 0.4, cyc: 2, tp: false, width: 1.4, lock: true,
+    medium: 'air', temp: 20, rh: 50, cc: 343, absorb: true,
+    inst: 'single', elem: 'point', params: {}, custom: false, customEls: null,
+    bnd: 'none', bdist: 1, brefl: 0.9,
+    mode: 'molecules', cam: 'top', n: 6000, color: true, hl: true, labels: true, polar: false, micOn: false, mic: null, span: 36,
+    tab: 'signal', lang: 'en',
+  };
+  const st = JSON.parse(JSON.stringify(DEF));
+  try { const s = JSON.parse(localStorage.getItem('sfl-state') || 'null'); if (s && typeof s === 'object') Object.assign(st, s); } catch (e) { /* storage blocked: defaults */ }
+  let saveT = 0;
+  function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem('sfl-state', JSON.stringify(st)); } catch (e) { /* ignore */ } }, 400); }
+  let phase = 0, paused = false;
+
+  // ---------------- Derived quantities ----------------
+  const med = () => P.MEDIA[st.medium] || P.MEDIA.air;
+  const c = () => st.medium === 'custom' ? st.cc : med().c(st.temp);
+  const lam = () => c() / st.f;
+  const kk = () => 2 * PI * st.f / c();
+  const alpha = () => st.absorb ? med().alpha(st.f, st.temp, st.rh) : 0;
+  const rawCycle = () => st.tp ? st.cyc * F_REF / st.f : st.cyc;
+  const cycleS = () => Math.max(rawCycle(), st.tp ? MIN_CYCLE_S : 0);
+  const capped = () => st.tp && rawCycle() < MIN_CYCLE_S;
+  const tr = (k, vars) => { let s = (I18N[st.lang] && I18N[st.lang][k]) || I18N.en[k] || k; if (vars) for (const v in vars) s = s.split('{' + v + '}').join(vars[v]); return s; };
+
+  // ---------------- Formatting ----------------
+  const dec = (x, n) => { const s = x.toFixed(n); return st.lang === 'en' ? s : s.replace('.', ','); };
+  function fmtLen(m) { if (!isFinite(m)) return '∞'; if (m >= 1000) return dec(m / 1000, 2) + ' km'; if (m >= 1) return dec(m, m >= 10 ? 1 : 2) + ' m'; if (m >= 0.01) return dec(m * 100, 1) + ' cm'; return dec(m * 1000, 1) + ' mm'; }
+  function fmtF(f) { return f >= 1000 ? dec(f / 1000, f >= 10000 ? 1 : 2).replace(/[.,]?0+$/, '') + ' kHz' : Math.round(f) + ' Hz'; }
+  function fmtT(s) { return s >= 1e-3 ? dec(s * 1000, s >= 0.01 ? 2 : 3) + ' ms' : dec(s * 1e6, 0) + ' µs'; }
+  function fmtCycle(s) { return s >= 10 ? dec(s, 0) + ' s' : s >= 1 ? dec(s, 1) + ' s' : dec(s, 2) + ' s'; }
+  function fmtDb(x) { return (x > 0 ? '+' : '') + dec(x, 1); }
+
+  // ---------------- Canvas and theme tokens ----------------
+  const cv = $('c'), ctx = cv.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = Math.max(1, cv.clientWidth); H = Math.max(1, cv.clientHeight);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    invalidateView();
+  }
+  const TOK = {};
+  function readTokens() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ['bg', 'stage', 'panel', 'ink', 'muted', 'line', 'accent', 'dot', 'source', 'pos', 'neg', 'hl', 'cab']) TOK[k] = cs.getPropertyValue('--' + k).trim();
+    for (const k of ['stage', 'pos', 'neg']) TOK[k + 'RGB'] = hexRgb(TOK[k]);
+    sprites.clear(); texDirty = true;
+  }
+  function hexRgb(hex) { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, x => x + x) : h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+  function mix(hex, to, t) { const c3 = hexRgb(hex).map(v => Math.round(v + (to - v) * t)); return 'rgb(' + c3.join(',') + ')'; }
+
+  // ---------------- Scene: elements → sources ----------------
+  let scene = { elements: [], plane: 'plan' }, S = null, ver = 0;
+  function regen() {
+    const def = P.INSTALLS[st.inst] || P.INSTALLS.single;
+    for (const k of def.params) if (st.params[k] === undefined) st.params[k] = def.def[k];
+    if (st.custom && st.customEls) scene = { elements: st.customEls, plane: def.plane || 'plan' };
+    else scene = P.layout(st.inst, st.params, st.elem, c());
+    invalidate();
+  }
+  function invalidate() { ver++; S = null; polarDirty = true; texDirty = true; }
+  function invalidateView() { texDirty = true; polarDirty = true; }
+  const bnd = () => st.bnd === 'none' ? null : { kind: st.bnd, dist: st.bdist, refl: st.brefl };
+  function sources() { if (!S) S = P.buildSources(scene.elements, scene.plane, bnd(), st.f); return S; }
+
+  // ---------------- View region and camera ----------------
+  const CAMS = { top: { az: 0, el: PI / 2 }, iso: { az: PI / 4, el: Math.atan(1 / Math.SQRT2) }, low: { az: 0.45, el: 13 * DEG } };
+  const cam = Object.assign({}, CAMS[st.cam] || CAMS.top);
+  const isTop = () => cam.el > 1.5707;
+  function region() {
+    const Lx = st.width / 2, Ly = isTop() ? Lx * H / W : Lx, s = sources();
+    return { Lx, Ly, cx: s.cx, cy: s.cy };
+  }
+  function makeProj(R, hExt) {
+    const ca = Math.cos(cam.az), sa = Math.sin(cam.az), ce = Math.cos(cam.el), se = Math.sin(cam.el), top = isTop();
+    const wx = R.Lx * Math.abs(ca) + R.Ly * Math.abs(sa);
+    const wy = (R.Lx * Math.abs(sa) + R.Ly * Math.abs(ca)) * se + (top ? 0 : hExt) * ce;
+    const sc = (top ? 1 : 0.88) * Math.min(W / 2 / wx, H / 2 / wy), ox = W / 2, oy = H / 2;
+    const X = (x, y) => ox + sc * ((x - R.cx) * ca - (y - R.cy) * sa);
+    const Y = (x, y, z) => oy + sc * (((x - R.cx) * sa + (y - R.cy) * ca) * se - (z || 0) * ce);
+    return { sc, ca, sa, ce, se, top, X, Y, R };
+  }
+  // visual sizes, as in the original app (source radius 5–30 px, swing up to 60 px), converted to metres
+  function vis(R) {
+    const pxm = W / (2 * R.Lx), l = lam();
+    return { r0: Math.min(Math.max(l * 0.06, 5 / pxm), 30 / pxm), A: st.amp * Math.min(l * 0.11, 60 / pxm) };
+  }
+
+  // ---------------- Field caches (recomputed only when something changes) ----------------
+  const cache = {};
+  function field(name, key, mkPts, law, r0) {
+    const full = [ver, key, law, r0.toFixed(7), st.width, W, H].join('|');
+    let e = cache[name];
+    if (!e || e.key !== full) {
+      const P3 = mkPts();
+      e = cache[name] = { key: full, P3, F: P.evaluate(sources(), P3, P3.length / 3, { k: kk(), f: st.f, alpha: alpha(), law, r0 }) };
+    }
+    return e;
+  }
+  const dX = (F, o, cp, sp) => F[o] * cp - F[o + 1] * sp;
+  const dY = (F, o, cp, sp) => F[o + 2] * cp - F[o + 3] * sp;
+  const dZ = (F, o, cp, sp) => F[o + 4] * cp - F[o + 5] * sp;
+  const pRaw = (F, o, cp, sp) => F[o + 6] * sp + F[o + 7] * cp;
+  const pN = (F, o, cp, sp) => Math.max(-1, Math.min(1, pRaw(F, o, cp, sp) * F[o + 8]));
+
+  // ---------------- Molecules ----------------
+  let px = [], py = [], pz = [], qIn = [], qOut = [];
+  let seed = 12345; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  function buildParticles() {
+    seed = 12345; px = []; py = [];
+    for (let i = 0; i < st.n; i++) { px.push(rnd() - 0.5); py.push(rnd() - 0.5); }
+    seed = 99991; pz = []; for (let i = 0; i < st.n; i++) pz.push(rnd() - 0.5);
+    seed = 54321; qIn = [[], [], []]; qOut = [[], [], []];
+    const nIn = Math.round(Math.min(30000, st.n * 3) / 15);
+    for (let f = 0; f < 3; f++) { for (let i = 0; i < nIn; i++) qIn[f].push(rnd(), rnd()); for (let i = 0; i < 4 * nIn; i++) qOut[f].push(2 * rnd() - 1, 2 * rnd() - 1); }
+    order = null; for (const k in cache) delete cache[k];
+  }
+  const NB = 8;
+  const newBuckets = () => Array.from({ length: 2 * NB }, () => new Path2D());
+  const bIdx = p => (p >= 0 ? 0 : NB) + Math.min(NB - 1, Math.floor(Math.abs(p) * NB));
+  function paint(b, fill) {
+    for (let i = 0; i < 2 * NB; i++) {
+      const a = 0.15 + 0.85 * ((i % NB) + 0.5) / NB, col = st.color ? (i < NB ? TOK.pos : TOK.neg) : TOK.dot;
+      ctx.globalAlpha = st.color ? a : (fill ? 0.85 : 0.3 + 0.55 * a);
+      if (fill) { ctx.fillStyle = col; ctx.fill(b[i]); } else { ctx.strokeStyle = col; ctx.stroke(b[i]); }
+    }
+    ctx.globalAlpha = 1;
+  }
+  const sprites = new Map();
+  function ball(X, Y, r, color) {
+    const key = color + '|' + r.toFixed(1) + '|' + dpr;
+    let sp = sprites.get(key);
+    if (!sp) {
+      if (sprites.size > 60) sprites.clear();
+      const R = Math.ceil(Math.max(1, r) * dpr * 2); sp = document.createElement('canvas'); sp.width = sp.height = 2 * R;
+      const g = sp.getContext('2d'), gr = g.createRadialGradient(R * 0.7, R * 0.65, R * 0.08, R, R, R);
+      gr.addColorStop(0, mix(color, 255, 0.75)); gr.addColorStop(0.35, mix(color, 255, 0.1)); gr.addColorStop(0.85, mix(color, 0, 0.35)); gr.addColorStop(1, mix(color, 0, 0.55));
+      g.fillStyle = gr; g.beginPath(); g.arc(R, R, R * 0.98, 0, 2 * PI); g.fill(); sprites.set(key, sp);
+    }
+    ctx.drawImage(sp, X - r, Y - r, 2 * r, 2 * r);
+  }
+  let order = null, orderKey = '';
+  function drawMolecules(pr, R, V, cp, sp) {
+    const s = sources(), n = px.length, top = pr.top, hz = top ? 0 : Math.min(0.12 * R.Lx, 0.15 * lam());
+    const fc = field('mol', [n, R.Lx, R.Ly, hz, R.cx, R.cy].join(','), () => {
+      const a = new Float32Array(3 * n);
+      for (let i = 0; i < n; i++) { a[3 * i] = R.cx + px[i] * 2 * R.Lx; a[3 * i + 1] = R.cy + py[i] * 2 * R.Ly; a[3 * i + 2] = pz[i] * 2 * hz; }
+      return a;
+    }, 'visual', V.r0), F = fc.F, P3 = fc.P3, Asc = V.A / s.wsum;
+    if (top) {
+      const b = newBuckets(), r = Math.max(1.2, Math.min(2.4, W / 600));
+      for (let i = 0; i < n; i++) {
+        const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
+        const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp);
+        const X = pr.X(x, y), Y = pr.Y(x, y, 0);
+        const bb = b[st.color ? bIdx(pN(F, o, cp, sp)) : NB - 1]; bb.moveTo(X + r, Y); bb.arc(X, Y, r, 0, 2 * PI);
+      }
+      paint(b, true); return;
+    }
+    // 45° and low cameras: shaded spheres in a thin slab, far → near, with soft shadows on the floor
+    const zf = -hz - 0.04 * R.Lx, key = cam.az.toFixed(3) + cam.el.toFixed(3) + n;
+    if (!order || orderKey !== key) {
+      const dep = new Float32Array(n); for (let i = 0; i < n; i++) dep[i] = (px[i] * 2 * R.Lx * pr.sa + py[i] * 2 * R.Ly * pr.ca) * pr.ce + pz[i] * hz * pr.se;
+      order = Array.from(dep.keys()).sort((a, b) => dep[a] - dep[b]); orderKey = key;
+    }
+    floorOutline(pr, R, zf);
+    const rB = Math.max(2.2, Math.min(3.8, W / 380)), dmax = R.Lx * Math.abs(pr.sa) + R.Ly * Math.abs(pr.ca);
+    const XS = new Float32Array(n), YS = new Float32Array(n), PP = new Float32Array(n), SC = new Float32Array(n), shadow = new Path2D();
+    for (let i = 0; i < n; i++) {
+      const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
+      const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp), z = P3[3 * i + 2] + Asc * dZ(F, o, cp, sp);
+      XS[i] = pr.X(x, y); YS[i] = pr.Y(x, y, z); PP[i] = pN(F, o, cp, sp);
+      SC[i] = 1 + 0.25 * (((P3[3 * i] - R.cx) * pr.sa + (P3[3 * i + 1] - R.cy) * pr.ca) / dmax);
+      const sy = pr.Y(x, y, zf); shadow.moveTo(XS[i] + rB, sy); shadow.ellipse(XS[i], sy, rB * 1.1, rB * 0.5, 0, 0, 2 * PI);
+    }
+    ctx.fillStyle = TOK.ink; ctx.globalAlpha = 0.07; ctx.fill(shadow); ctx.globalAlpha = 1;
+    drawSources(pr, R, V, cp, sp, true);
+    for (let j = 0; j < n; j++) {
+      const i = order[j]; if (!SC[i]) continue;
+      const p = PP[i]; ctx.globalAlpha = st.color ? 0.3 + 0.7 * Math.abs(p) : 0.9;
+      ball(XS[i], YS[i], rB * SC[i], st.color ? (p >= 0 ? TOK.pos : TOK.neg) : TOK.dot);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------- Floor textures: pressure (ripple tank) and SPL map ----------------
+  const texCv = document.createElement('canvas'), texCtx = texCv.getContext('2d');
+  let texDirty = true, splStats = null;
+  function gridDims(R, maxG) { const gx = Math.round(Math.min(maxG, Math.max(120, W / 3))); return [gx, Math.max(40, Math.round(gx * R.Ly / R.Lx))]; }
+  function gridPts(R, gx, gy) {
+    const a = new Float32Array(3 * gx * gy);
+    for (let j = 0; j < gy; j++) for (let i = 0; i < gx; i++) { const id = j * gx + i; a[3 * id] = R.cx - R.Lx + (i + 0.5) * 2 * R.Lx / gx; a[3 * id + 1] = R.cy - R.Ly + (j + 0.5) * 2 * R.Ly / gy; }
+    return a;
+  }
+  function floorTransform(pr, R, z) {
+    const ex = [pr.sc * pr.ca, pr.sc * pr.sa * pr.se], ey = [-pr.sc * pr.sa, pr.sc * pr.ca * pr.se];
+    ctx.setTransform(dpr * ex[0], dpr * ex[1], dpr * ey[0], dpr * ey[1], dpr * pr.X(R.cx, R.cy), dpr * pr.Y(R.cx, R.cy, z));
+  }
+  function drawTexture(pr, R) {
+    ctx.save(); floorTransform(pr, R, 0); ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(texCv, -R.Lx, -R.Ly, 2 * R.Lx, 2 * R.Ly); ctx.restore();
+  }
+  let rippleImg = null;
+  function drawRipple(pr, R, V, cp, sp) {
+    const [gx, gy] = gridDims(R, 360);
+    const F = field('rip', [gx, gy, R.Lx, R.Ly, R.cx, R.cy].join(','), () => gridPts(R, gx, gy), 'visual', V.r0).F;
+    if (texCv.width !== gx || texCv.height !== gy) { texCv.width = gx; texCv.height = gy; rippleImg = null; }
+    if (!rippleImg) rippleImg = texCtx.createImageData(gx, gy);
+    const d = rippleImg.data, b = TOK.stageRGB, po = TOK.posRGB, ne = TOK.negRGB;
+    for (let i = 0, n = gx * gy; i < n; i++) {
+      const o = 9 * i, q = 4 * i;
+      if (Number.isNaN(F[o + 6])) { d[q + 3] = 0; continue; }
+      const v = pN(F, o, cp, sp), t = Math.min(1, Math.abs(v)), c3 = v >= 0 ? po : ne;
+      d[q] = b[0] + (c3[0] - b[0]) * t; d[q + 1] = b[1] + (c3[1] - b[1]) * t; d[q + 2] = b[2] + (c3[2] - b[2]) * t; d[q + 3] = 255;
+    }
+    texCtx.putImageData(rippleImg, 0, 0); drawTexture(pr, R);
+    if (2 * R.Lx / lam() > gx / 5) tooFine();
+  }
+  // SPL palette: 3 dB bands from red (0 dB) through yellow and green to blue (−span)
+  function splColor(t) { const h = 240 * t, s = 0.85, l = 0.5; const f = n => { const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l); return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }; return [f(0), f(8), f(4)]; }
+  function drawSPL(pr, R) {
+    const [gx, gy] = gridDims(R, sources().list.length > 8 ? 300 : 420);
+    const fc = field('spl', [gx, gy, R.Lx, R.Ly, R.cx, R.cy].join(','), () => gridPts(R, gx, gy), 'physical', 0.1), F = fc.F;
+    if (texDirty || !fc.img || fc.span !== st.span || fc.img.width !== gx) {
+      const n = gx * gy, L = new Float32Array(n), vals = [];
+      for (let i = 0; i < n; i++) { const o = 9 * i; L[i] = Number.isNaN(F[o + 6]) ? NaN : 20 * Math.log10(Math.hypot(F[o + 6], F[o + 7]) + 1e-12); if (!Number.isNaN(L[i])) vals.push(L[i]); }
+      vals.sort((a, b) => a - b); const mx = vals.length ? vals[Math.floor(vals.length * 0.997)] : 0;
+      const img = texCtx.createImageData(gx, gy), d = img.data, bands = st.span / 3;
+      for (let i = 0; i < n; i++) {
+        const q = 4 * i; if (Number.isNaN(L[i])) { d[q + 3] = 0; continue; }
+        const rel = Math.min(0, L[i] - mx); if (rel < -st.span) { d[q + 3] = 0; continue; }
+        const band = Math.min(bands - 1, Math.floor(-rel / 3)), c3 = splColor(band / Math.max(1, bands - 1));
+        d[q] = c3[0]; d[q + 1] = c3[1]; d[q + 2] = c3[2]; d[q + 3] = 235;
+      }
+      fc.img = img; fc.span = st.span; fc.max = mx; texDirty = false; splStats = { max: mx }; updateLegend();
+    }
+    if (texCv.width !== gx || texCv.height !== gy) { texCv.width = gx; texCv.height = gy; rippleImg = null; }
+    texCtx.putImageData(fc.img, 0, 0); drawTexture(pr, R);
+  }
+  function updateLegend() {
+    const bands = st.span / 3, bar = $('legendBar'); bar.innerHTML = '';
+    for (let i = 0; i < bands; i++) { const s = document.createElement('span'); const c3 = splColor(i / Math.max(1, bands - 1)); s.style.background = 'rgb(' + c3.join(',') + ')'; bar.appendChild(s); }
+    $('legendTicks').innerHTML = '<span>0</span><span>−' + st.span / 2 + '</span><span>−' + st.span + ' dB</span>';
+  }
+
+  // ---------------- Surface and air block ----------------
+  function floorOutline(pr, R, z) {
+    ctx.strokeStyle = TOK.line; ctx.lineWidth = 1; ctx.beginPath();
+    [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]].forEach(([a, b], i) => { const x = R.cx + a * R.Lx, y = R.cy + b * R.Ly; i ? ctx.lineTo(pr.X(x, y), pr.Y(x, y, z)) : ctx.moveTo(pr.X(x, y), pr.Y(x, y, z)); });
+    ctx.stroke();
+  }
+  function drawSurface(pr, R, V, cp, sp, Hm) {
+    const s = sources(), N = Math.min(160, Math.max(60, Math.ceil(2 * R.Lx / lam() * 12))), Ny = Math.max(20, Math.round(N * R.Ly / R.Lx)), n1 = N + 1, m1 = Ny + 1;
+    const F = field('surf', [N, Ny, R.Lx, R.Ly, R.cx, R.cy].join(','), () => {
+      const a = new Float32Array(3 * n1 * m1);
+      for (let j = 0; j < m1; j++) for (let i = 0; i < n1; i++) { const id = j * n1 + i; a[3 * id] = R.cx - R.Lx + i * 2 * R.Lx / N; a[3 * id + 1] = R.cy - R.Ly + j * 2 * R.Ly / Ny; }
+      return a;
+    }, 'visual', V.r0).F;
+    const SX = new Float32Array(n1 * m1), SY = new Float32Array(n1 * m1), PP = new Float32Array(n1 * m1), OK = new Uint8Array(n1 * m1);
+    for (let j = 0; j < m1; j++) for (let i = 0; i < n1; i++) {
+      const id = j * n1 + i, o = 9 * id; if (Number.isNaN(F[o + 6])) continue;
+      const x = R.cx - R.Lx + i * 2 * R.Lx / N, y = R.cy - R.Ly + j * 2 * R.Ly / Ny;
+      OK[id] = 1; SX[id] = pr.X(x, y); SY[id] = pr.Y(x, y, Hm * pRaw(F, o, cp, sp) / s.wsum); PP[id] = pN(F, o, cp, sp);
+    }
+    floorOutline(pr, R, 0);
+    const b = newBuckets();
+    for (let j = 0; j < m1; j++) for (let i = 0; i < N; i++) { const a = j * n1 + i, e = a + 1; if (OK[a] && OK[e]) { const bb = b[bIdx((PP[a] + PP[e]) / 2)]; bb.moveTo(SX[a], SY[a]); bb.lineTo(SX[e], SY[e]); } }
+    for (let i = 0; i < n1; i++) for (let j = 0; j < Ny; j++) { const a = j * n1 + i, e = a + n1; if (OK[a] && OK[e]) { const bb = b[bIdx((PP[a] + PP[e]) / 2)]; bb.moveTo(SX[a], SY[a]); bb.lineTo(SX[e], SY[e]); } }
+    ctx.lineWidth = 1; paint(b, false);
+    if (2 * R.Lx / lam() > 13) tooFine();
+  }
+  function drawBlock(pr, R, V, cp, sp) {
+    const s = sources(), L = R.Lx, sx = Math.sign(pr.sa) || 1, sy = Math.sign(pr.ca) || 1, cx = R.cx, cy = R.cy;
+    const fc = field('block', [sx, sy, L, cx, cy, qIn[0].length].join(','), () => {
+      const a = [];
+      for (let i = 0; i < qIn[0].length; i += 2) {
+        a.push(cx, cy + sy * qIn[0][i] * L, qIn[0][i + 1] * L); a.push(cx + sx * qIn[1][i] * L, cy, qIn[1][i + 1] * L); a.push(cx + sx * qIn[2][i] * L, cy + sy * qIn[2][i + 1] * L, 0);
+      }
+      for (let i = 0; i < qOut[0].length; i += 2) {
+        const u = qOut[0][i], v = qOut[0][i + 1]; if (!(u * sx > 0 && v * sy > 0)) a.push(cx + u * L, cy + v * L, L);
+        const u1 = qOut[1][i], v1 = qOut[1][i + 1]; if (!(u1 * sy > 0 && v1 > 0)) a.push(cx + sx * L, cy + u1 * L, v1 * L);
+        const u2 = qOut[2][i], v2 = qOut[2][i + 1]; if (!(u2 * sx > 0 && v2 > 0)) a.push(cx + u2 * L, cy + sy * L, v2 * L);
+      }
+      return new Float32Array(a);
+    }, 'visual', V.r0), F = fc.F, P3 = fc.P3, n = P3.length / 3, Asc = V.A / s.wsum;
+    const b = newBuckets(), d = Math.max(1.5, Math.min(2.6, W / 600));
+    for (let i = 0; i < n; i++) {
+      const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
+      const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp), z = P3[3 * i + 2] + Asc * dZ(F, o, cp, sp);
+      const X = pr.X(x, y), Y = pr.Y(x, y, z); b[st.color ? bIdx(pN(F, o, cp, sp)) : NB - 1].rect(X - d / 2, Y - d / 2, d, d);
+    }
+    paint(b, true);
+    ctx.strokeStyle = TOK.muted; ctx.globalAlpha = 0.6; ctx.lineWidth = 1;
+    const sg = (a, b2, c2, d2, e, f) => { ctx.beginPath(); ctx.moveTo(pr.X(cx + a, cy + b2), pr.Y(cx + a, cy + b2, c2)); ctx.lineTo(pr.X(cx + d2, cy + e), pr.Y(cx + d2, cy + e, f)); ctx.stroke(); };
+    const X0 = sx * L, Y0 = sy * L, Xb = -sx * L, Yb = -sy * L;
+    sg(Xb, Yb, L, X0, Yb, L); sg(Xb, Yb, L, Xb, Y0, L); sg(X0, Yb, L, X0, Yb, -L); sg(Xb, Y0, L, Xb, Y0, -L);
+    sg(X0, Yb, -L, X0, Y0, -L); sg(Xb, Y0, -L, X0, Y0, -L); sg(X0, Y0, -L, X0, Y0, 0); sg(X0, Yb, L, X0, 0, L); sg(Xb, Y0, L, 0, Y0, L);
+    sg(X0, 0, L, X0, 0, 0); sg(0, Y0, L, 0, Y0, 0); sg(X0, 0, 0, 0, 0, 0); sg(0, Y0, 0, 0, 0, 0); sg(0, 0, L, 0, 0, 0);
+    sg(X0, 0, L, 0, 0, L); sg(0, Y0, L, 0, 0, L); sg(X0, Y0, 0, X0, 0, 0); sg(X0, Y0, 0, 0, Y0, 0);
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------- Loudspeakers, boundary, labels ----------------
+  function elPulse(e, cp, sp) { const ph = -2 * PI * st.f * e.delay; return e.pol * (cp * Math.cos(ph) - sp * Math.sin(ph)); }   // Re(pol·e^(i(φ−ωτ)))
+  function drawSources(pr, R, V, cp, sp, shaded) {
+    const els = scene.elements.filter(e => !e.mute);
+    const depth = e => (e.x - R.cx) * pr.sa + (e.y - R.cy) * pr.ca;
+    els.sort((a, b) => depth(a) - depth(b));
+    for (const e of els) {
+      const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size, mv = V.A * 0.6 * elPulse(e, cp, sp), ca = Math.cos(e.aim), sa = Math.sin(e.aim);
+      if (sz[0] === 0) {
+        const r = Math.max(3, (V.r0 + mv) * pr.sc), X = pr.X(e.x, e.y), Y = pr.Y(e.x, e.y, 0);
+        if (shaded || !pr.top) ball(X, Y, r, TOK.source); else { ctx.fillStyle = TOK.source; ctx.beginPath(); ctx.arc(X, Y, r, 0, 2 * PI); ctx.fill(); }
+        continue;
+      }
+      const w2 = sz[1] / 2, d = sz[0], h2 = sz[2] / 2;
+      const corner = (u, v) => [e.x + ca * u - sa * v, e.y + sa * u + ca * v];   // u along the aim (0 = front face), v across
+      const fl = corner(0, w2), fr = corner(0, -w2), bl = corner(-d, w2), br = corner(-d, -w2);
+      if (pr.top) {
+        ctx.beginPath(); [fl, bl, br, fr].forEach(([x, y], i) => i ? ctx.lineTo(pr.X(x, y), pr.Y(x, y)) : ctx.moveTo(pr.X(x, y), pr.Y(x, y))); ctx.closePath();
+        ctx.fillStyle = TOK.cab; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1;
+        const m1 = corner(mv, w2 * 0.85), m2 = corner(mv, -w2 * 0.85);
+        ctx.strokeStyle = TOK.source; ctx.lineWidth = Math.max(2, Math.min(5, sz[1] * pr.sc * 0.08));
+        ctx.beginPath(); ctx.moveTo(pr.X(...m1), pr.Y(...m1)); ctx.lineTo(pr.X(...m2), pr.Y(...m2)); ctx.stroke();
+        if (e.type === 'dipole') { const b1 = corner(-d + mv, w2 * 0.85), b2 = corner(-d + mv, -w2 * 0.85); ctx.strokeStyle = TOK.neg; ctx.beginPath(); ctx.moveTo(pr.X(...b1), pr.Y(...b1)); ctx.lineTo(pr.X(...b2), pr.Y(...b2)); ctx.stroke(); }
+        ctx.lineWidth = 1;
+      } else {
+        // prism: side faces turned to the camera, then the top
+        const quad = [fl, fr, br, bl], faces = [];
+        for (let i = 0; i < 4; i++) {
+          const a = quad[i], b = quad[(i + 1) % 4], nx = -(b[1] - a[1]), ny = b[0] - a[0];       // outward normal
+          const vis2 = nx * pr.sa + ny * pr.ca; if (vis2 <= 0) continue;
+          faces.push({ pts: [[a[0], a[1], -h2], [b[0], b[1], -h2], [b[0], b[1], h2], [a[0], a[1], h2]], front: i === 0, shade: 0.25 + 0.25 * (i % 2) });
+        }
+        faces.push({ pts: quad.map(q => [q[0], q[1], h2]), shade: -0.15 });
+        for (const f of faces) {
+          ctx.beginPath(); f.pts.forEach(([x, y, z], i) => i ? ctx.lineTo(pr.X(x, y), pr.Y(x, y, z)) : ctx.moveTo(pr.X(x, y), pr.Y(x, y, z))); ctx.closePath();
+          ctx.fillStyle = f.front ? TOK.source : (f.shade > 0 ? mix(TOK.cab, 0, f.shade) : mix(TOK.cab, 255, -f.shade)); ctx.fill();
+          ctx.strokeStyle = TOK.ink; ctx.globalAlpha = 0.35; ctx.stroke(); ctx.globalAlpha = 1;
+        }
+      }
+    }
+    if (st.labels && els.length <= 24) drawLabels(pr, els);
+  }
+  function drawLabels(pr, els) {
+    ctx.font = '600 11.5px system-ui, -apple-system, sans-serif'; ctx.textAlign = 'center';
+    for (const e of els) {
+      const t = []; if (e.pol < 0) t.push('−'); if (e.delay > 1e-6) t.push(dec(e.delay * 1000, 1) + ' ms'); if (Math.abs(e.gain) > 0.05) t.push(fmtDb(e.gain) + ' dB');
+      if (!t.length) continue;
+      const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size, off = Math.max(sz[1], 0.2) * 0.5 + 12 / pr.sc;
+      const X = pr.X(e.x, e.y), Y = pr.Y(e.x, e.y, Math.max(sz[2] / 2, 0)) - (pr.top ? off * pr.sc : 10);
+      const s = t.join(' · '), w = ctx.measureText(s).width + 8;
+      ctx.fillStyle = TOK.panel; ctx.globalAlpha = 0.85; ctx.fillRect(X - w / 2, Y - 11, w, 15); ctx.globalAlpha = 1;
+      ctx.fillStyle = TOK.ink; ctx.fillText(s, X, Y);
+    }
+  }
+  function drawWall(pr, R) {
+    const s = sources(); if (!s.wall) return;
+    ctx.strokeStyle = TOK.ink; ctx.lineWidth = 2;
+    const a = s.wall.kind === 'back' ? [[s.wall.at, R.cy - R.Ly], [s.wall.at, R.cy + R.Ly]] : [[R.cx - R.Lx, s.wall.at], [R.cx + R.Lx, s.wall.at]];
+    ctx.beginPath(); ctx.moveTo(pr.X(...a[0]), pr.Y(...a[0], 0)); ctx.lineTo(pr.X(...a[1]), pr.Y(...a[1], 0)); ctx.stroke();
+    ctx.lineWidth = 1; ctx.globalAlpha = 0.5; const n = 28, h = 0.025 * R.Lx * 2;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, x = a[0][0] + (a[1][0] - a[0][0]) * t, y = a[0][1] + (a[1][1] - a[0][1]) * t;
+      const x2 = s.wall.kind === 'back' ? x - h : x + h * 0.6, y2 = s.wall.kind === 'back' ? y + h * 0.6 : y + h;
+      ctx.beginPath(); ctx.moveTo(pr.X(x, y), pr.Y(x, y, 0)); ctx.lineTo(pr.X(x2, y2), pr.Y(x2, y2, 0)); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawHighlight(pr, R, V, cp, sp, zMode, Hm) {
+    const s = sources(), rh = Math.min(1.5 * lam() + V.r0, R.Lx * 0.9), x0 = s.cx + rh, y0 = s.cy;
+    const F = P.evaluate(s, new Float32Array([x0, y0, 0]), 1, { k: kk(), f: st.f, alpha: alpha(), law: 'visual', r0: V.r0 });
+    if (Number.isNaN(F[6])) return;
+    const xs = x0 + V.A / s.wsum * dX(F, 0, cp, sp), z = zMode ? Hm * pRaw(F, 0, cp, sp) / s.wsum : 0;
+    ctx.strokeStyle = TOK.muted; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+    const t = pr.top ? 18 / pr.sc : R.Lx * 0.05;
+    ctx.beginPath(); ctx.moveTo(pr.X(x0, y0 - t), pr.Y(x0, y0 - t, 0)); ctx.lineTo(pr.X(x0, y0 + t), pr.Y(x0, y0 + t, 0)); ctx.stroke(); ctx.setLineDash([]);
+    const r = pr.top ? Math.max(1.2, Math.min(2.4, W / 600)) * 3.2 : 7;
+    if (pr.top) { ctx.fillStyle = TOK.hl; ctx.beginPath(); ctx.arc(pr.X(xs, y0), pr.Y(xs, y0, 0), r, 0, 2 * PI); ctx.fill(); }
+    else ball(pr.X(xs, y0), pr.Y(xs, y0, z), r, TOK.hl);
+  }
+  function micReading() {
+    if (!st.micOn || !st.mic) return null;
+    const F = P.evaluate(sources(), new Float32Array([st.mic.x, st.mic.y, 0]), 1, { k: kk(), f: st.f, alpha: alpha(), law: 'physical', rmin: 0.1 });
+    if (Number.isNaN(F[6])) return null;
+    return { db: 20 * Math.log10(Math.hypot(F[6], F[7]) + 1e-12), ph: Math.atan2(F[7], F[6]) / DEG };
+  }
+  function drawMic(pr) {
+    if (!st.micOn || !st.mic) return;
+    const X = pr.X(st.mic.x, st.mic.y), Y = pr.Y(st.mic.x, st.mic.y, 0), m = micReading();
+    ctx.strokeStyle = TOK.ink; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(X, Y, 7, 0, 2 * PI); ctx.moveTo(X - 12, Y); ctx.lineTo(X + 12, Y); ctx.moveTo(X, Y - 12); ctx.lineTo(X, Y + 12); ctx.stroke();
+    if (m) { ctx.font = '600 12px system-ui, sans-serif'; ctx.textAlign = 'left'; const s = fmtDb(m.db) + ' dB'; const w = ctx.measureText(s).width + 8;
+      ctx.fillStyle = TOK.panel; ctx.globalAlpha = 0.9; ctx.fillRect(X + 12, Y - 22, w, 16); ctx.globalAlpha = 1; ctx.fillStyle = TOK.ink; ctx.fillText(s, X + 16, Y - 10); }
+  }
+  function drawScale(pr, R) {
+    ctx.strokeStyle = TOK.ink; ctx.fillStyle = TOK.ink; ctx.lineWidth = 2; ctx.font = '13px system-ui, sans-serif';
+    const l = lam();
+    if (pr.top) {
+      const bar = l * pr.sc, bx1 = 16, by = H - 66, bx2 = bx1 + Math.min(bar, W * 0.5);   // bottom left, above the transport bar
+      ctx.beginPath(); ctx.moveTo(bx1, by); ctx.lineTo(bx2, by); ctx.moveTo(bx1, by - 5); ctx.lineTo(bx1, by + 5); ctx.moveTo(bx2, by - 5); ctx.lineTo(bx2, by + 5); ctx.stroke();
+      ctx.textAlign = 'left'; ctx.fillText((bar > W * 0.5 ? '> ' : '') + 'λ = ' + fmtLen(l), bx1, by - 8);
+    } else {
+      const sy = Math.sign(pr.ca) || 1, sx = Math.sign(pr.sa) || 1, len = Math.min(l, 2 * R.Lx), x1 = R.cx - sx * R.Lx, x2 = x1 + sx * len, y = R.cy + sy * R.Ly * 1.06;
+      ctx.beginPath(); ctx.moveTo(pr.X(x1, y), pr.Y(x1, y, 0)); ctx.lineTo(pr.X(x2, y), pr.Y(x2, y, 0)); ctx.stroke();
+      ctx.textAlign = 'center'; const lx = pr.Y(x1, y, 0) > pr.Y(x2, y, 0) ? x1 : x2;
+      ctx.fillText((l > 2 * R.Lx ? '> ' : '') + 'λ = ' + fmtLen(l), pr.X(lx, y), Math.max(pr.Y(x1, y, 0), pr.Y(x2, y, 0)) + 18);
+    }
+    ctx.lineWidth = 1;
+    if (scene.plane === 'section') { ctx.textAlign = 'left'; ctx.fillStyle = TOK.muted; ctx.fillText(tr('section'), 16, H - 92); }
+  }
+  let fineMsg = false;
+  function tooFine() { fineMsg = true; }
+
+  // ---------------- Polar plot ----------------
+  let polarDirty = true;
+  function drawPolar() {
+    const card = $('polarCard'); card.hidden = !st.polar; if (!st.polar || !polarDirty) return; polarDirty = false;
+    const pc = $('polar'), g = pc.getContext('2d'), N = 360, s = sources();
+    let ext = 0; for (const e of scene.elements) ext = Math.max(ext, Math.hypot(e.x - s.cx, e.y - s.cy));
+    const Rr = Math.max(8 * lam(), 6 * ext, 4);
+    const L = P.polar(s, Rr, N, { k: kk(), f: st.f, alpha: 0 });
+    const w = pc.width, cx = w / 2, R0 = w / 2 - 14, span = 30;
+    g.clearRect(0, 0, w, w); g.strokeStyle = TOK.line; g.lineWidth = 1.5; g.fillStyle = TOK.muted; g.font = '20px system-ui, sans-serif'; g.textAlign = 'left';
+    for (const db of [0, -6, -12, -18, -24]) { const r = R0 * (1 + db / span); g.beginPath(); g.arc(cx, cx, r, 0, 2 * PI); g.stroke(); if (db) g.fillText(db, cx + 3, cx - r + 18); }
+    g.beginPath(); g.moveTo(cx - R0, cx); g.lineTo(cx + R0, cx); g.moveTo(cx, cx - R0); g.lineTo(cx, cx + R0); g.stroke();
+    g.beginPath();
+    for (let i = 0; i <= N; i++) { const a = 2 * PI * (i % N) / N, r = R0 * Math.max(0, 1 + Math.max(-span, L[i % N]) / span); const X = cx + r * Math.cos(a), Y = cx + r * Math.sin(a); i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.closePath(); g.fillStyle = TOK.accent; g.globalAlpha = 0.18; g.fill(); g.globalAlpha = 1; g.strokeStyle = TOK.accent; g.lineWidth = 3; g.stroke();
+    g.fillStyle = TOK.ink; g.font = '600 20px system-ui, sans-serif'; g.textAlign = 'right'; g.fillText('0°', w - 6, cx - 6);
+    $('polarT').textContent = tr('polar_t', { r: fmtLen(Rr), f: fmtF(st.f) });
+  }
+
+  // ---------------- Frame ----------------
+  let last = performance.now(), fpsAcc = 0, fpsN = 0;
+  function draw() {
+    const R = region(), V = vis(R), cp = Math.cos(phase), sp = Math.sin(phase);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = TOK.stage; ctx.fillRect(0, 0, W, H);
+    fineMsg = false;
+    const mode = st.mode, Hm = st.amp * R.Lx * 0.35;
+    let hExt = 0.06 * R.Lx; if (mode === 'surface') hExt = Hm * 1.45 + 0.08 * R.Lx; if (mode === 'block') hExt = R.Lx;
+    const pr = makeProj(mode === 'block' ? { Lx: R.Lx, Ly: R.Lx, cx: R.cx, cy: R.cy } : R, hExt);
+    const Rb = mode === 'block' ? { Lx: R.Lx, Ly: R.Lx, cx: R.cx, cy: R.cy } : R;
+    if (mode === 'ripple') drawRipple(pr, R, V, cp, sp);
+    else if (mode === 'spl') drawSPL(pr, R);
+    else if (mode === 'surface') drawSurface(pr, R, V, cp, sp, Hm);
+    else if (mode === 'block') drawBlock(pr, Rb, V, cp, sp);
+    else drawMolecules(pr, R, V, cp, sp);
+    drawWall(pr, Rb);
+    if (!(mode === 'molecules' && !pr.top)) drawSources(pr, Rb, V, cp, sp, false);
+    if (st.hl && (mode === 'molecules' || mode === 'surface' || mode === 'block')) drawHighlight(pr, Rb, V, cp, sp, mode === 'surface', Hm);
+    drawMic(pr);
+    drawScale(pr, Rb);
+    if (fineMsg) { ctx.fillStyle = TOK.ink; ctx.font = '13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(tr('toofine'), W / 2, 64); }
+    lastProj = pr;
+    $('legend').hidden = mode !== 'spl';
+    drawPolar();
+  }
+  let lastProj = null;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!paused) phase += 2 * PI * dt / cycleS();
+    if (phase > 1e6) phase %= 2 * PI;
+    draw();
+    fpsAcc += dt; fpsN++;
+    if (fpsAcc > 2) {
+      const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
+      if (fps < 40 && st.n > 1500 && st.mode === 'molecules' && !isTop()) { st.n = Math.max(1500, Math.round(st.n * 0.8 / 500) * 500); buildParticles(); syncUI(); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------- Interface ----------------
+  const toLog = (v, lo, hi) => lo * Math.pow(hi / lo, v / 1000);
+  const fromLog = (x, lo, hi) => Math.round(1000 * Math.log(x / lo) / Math.log(hi / lo));
+  function setF(f) {
+    st.f = Math.min(F_MAX, Math.max(F_MIN, f));
+    if (!st.lock) st.width = Math.min(W_MAX, Math.max(W_MIN, 4 * lam()));
+    if (!st.custom) regen(); else invalidate();
+    syncUI();
+  }
+  function fit4() { st.width = Math.min(W_MAX, Math.max(W_MIN, 4 * lam())); invalidateView(); syncUI(); }
+  function fitScene() {
+    const s = sources(); let ext = 0;
+    for (const e of scene.elements) { const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size; ext = Math.max(ext, Math.abs(e.x - s.cx) + sz[0], Math.abs(e.y - s.cy) + sz[1]); }
+    if (s.wall) ext = Math.max(ext, s.wall.kind === 'back' ? Math.abs(s.wall.at - s.cx) : Math.abs(s.wall.at - s.cy));
+    st.width = Math.min(W_MAX, Math.max(W_MIN, ext > 0 ? Math.max(4 * lam(), 3.2 * ext, ext * 2 + 3 * lam()) : 4 * lam()));
+    invalidateView(); syncUI();
+  }
+  const INST_F = { line: 80, arc: 80, arcdelay: 80, gradient: 63, invstack: 63, endfire: 80, lr: 63, uni: 63, steer: 1000, jarray: 2000, delay: 250 };
+  function setInst(id, keepF) {
+    st.inst = id; st.custom = false; st.customEls = null;
+    const d = P.INSTALLS[id]; st.params = Object.assign({}, d.def); st.elem = d.elem;
+    if (!keepF && INST_F[id]) st.f = INST_F[id];
+    if (d.plane === 'section' && st.bnd === 'back') st.bnd = 'none';
+    regen(); fitScene(); buildCards(); syncUI();
+  }
+
+  // thumbnails for installation and loudspeaker cards
+  function thumbInst(cvs, id) {
+    const g = cvs.getContext('2d'), w = cvs.width = 180, h = cvs.height = 84, d = P.INSTALLS[id];
+    const L = P.layout(id, d.def, d.elem, 343).elements;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const e of L) { const s = Math.max(0.3, P.ELEMENTS[e.type].size[1]); x0 = Math.min(x0, e.x - 0.8); x1 = Math.max(x1, e.x + 0.4); y0 = Math.min(y0, e.y - s); y1 = Math.max(y1, e.y + s); }
+    const sc = Math.min((w - 16) / (x1 - x0 + 1), (h - 12) / (y1 - y0)), ox = w / 2 - sc * (x0 + x1) / 2, oy = h / 2 - sc * (y0 + y1) / 2;
+    g.clearRect(0, 0, w, h);
+    for (const e of L) {
+      const sz = P.ELEMENTS[e.type].size, ca = Math.cos(e.aim), sa = Math.sin(e.aim), dd = Math.max(sz[0], 0.3, 7 / sc), ww = Math.max(sz[1], 0.3, 12 / sc) / 2;   // never smaller than a few pixels
+      const C = (u, v) => [ox + sc * (e.x + ca * u - sa * v), oy + sc * (e.y + sa * u + ca * v)];
+      g.beginPath(); [C(0, ww), C(-dd, ww), C(-dd, -ww), C(0, -ww)].forEach(([X, Y], i) => i ? g.lineTo(X, Y) : g.moveTo(X, Y)); g.closePath();
+      g.fillStyle = e.pol < 0 ? TOK.neg : TOK.cab; g.fill();
+      g.strokeStyle = TOK.source; g.lineWidth = 2.5; g.beginPath(); g.moveTo(...C(0, ww)); g.lineTo(...C(0, -ww)); g.stroke();
+      if (e.delay > 1e-6) { g.fillStyle = TOK.accent; g.beginPath(); g.arc(...C(-dd / 2, 0), 3, 0, 2 * PI); g.fill(); }
+    }
+  }
+  function thumbElem(cvs, id) {
+    const g = cvs.getContext('2d'), w = cvs.width = 180, h = cvs.height = 84, E = P.ELEMENTS[id];
+    g.clearRect(0, 0, w, h);
+    const f = 2000, k = 2 * PI * f / 343, fn = P.dirFn(id, 'plan'), cx = w / 2, cy = h / 2, R = 36;
+    g.beginPath();
+    for (let i = 0; i <= 120; i++) { const a = 2 * PI * i / 120, dv = Math.abs(fn(k, f, Math.cos(a), Math.abs(Math.sin(a)))); const db = Math.max(-24, 20 * Math.log10(dv + 1e-9)); const r = R * (1 + db / 24); const X = cx + r * Math.cos(a), Y = cy + r * Math.sin(a); i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.fillStyle = TOK.accent; g.globalAlpha = 0.18; g.fill(); g.globalAlpha = 1; g.strokeStyle = TOK.accent; g.lineWidth = 2; g.stroke();
+    const s = 26 / Math.max(0.6, E.size[1] || 0.6);
+    if (E.size[0] === 0) { g.fillStyle = TOK.source; g.beginPath(); g.arc(cx, cy, 6, 0, 2 * PI); g.fill(); return; }
+    g.fillStyle = TOK.cab; g.fillRect(cx - E.size[0] * s, cy - E.size[1] * s / 2, E.size[0] * s, E.size[1] * s);
+    g.strokeStyle = TOK.source; g.lineWidth = 3; g.beginPath(); g.moveTo(cx, cy - E.size[1] * s / 2); g.lineTo(cx, cy + E.size[1] * s / 2); g.stroke();
+  }
+  function buildCards() {
+    const ic = $('instCards'); ic.innerHTML = '';
+    for (const id of Object.keys(P.INSTALLS)) {
+      const b = document.createElement('button'); b.className = 'gcard'; b.setAttribute('aria-pressed', String(st.inst === id && !st.custom));
+      const cvs = document.createElement('canvas'); thumbInst(cvs, id); const sp = document.createElement('span'); sp.textContent = tr('i_' + id);
+      b.append(cvs, sp); b.onclick = () => setInst(id); ic.appendChild(b);
+    }
+    const ec = $('elemCards'); ec.innerHTML = '';
+    for (const id of Object.keys(P.ELEMENTS)) {
+      const b = document.createElement('button'); b.className = 'gcard'; b.setAttribute('aria-pressed', String(st.elem === id));
+      const cvs = document.createElement('canvas'); thumbElem(cvs, id); const sp = document.createElement('span'); sp.textContent = tr('e_' + id);
+      b.append(cvs, sp); b.onclick = () => { st.elem = id; if (st.custom && st.customEls) st.customEls.forEach(e => e.type = id); regen(); buildCards(); syncUI(); };
+      ec.appendChild(b);
+    }
+    const mc = $('medCards'); mc.innerHTML = '';
+    for (const id of Object.keys(P.MEDIA)) {
+      const b = document.createElement('button'); b.className = 'gcard'; b.setAttribute('aria-pressed', String(st.medium === id)); b.style.padding = '8px 4px';
+      const t = document.createElement('span'); t.textContent = tr('md_' + id); t.style.fontWeight = '600';
+      const v = document.createElement('span'); v.className = 'num'; v.style.color = 'var(--muted)';
+      const cc = id === 'custom' ? st.cc : P.MEDIA[id].c(id === st.medium ? st.temp : 20); v.textContent = Math.round(cc) + ' m/s';
+      b.append(t, v); b.onclick = () => setMedium(id); mc.appendChild(b);
+    }
+  }
+  function setMedium(id) {
+    st.medium = id; const m = med();
+    if (m.temp) st.temp = Math.min(m.temp[1], Math.max(m.temp[0], st.temp));
+    if (!st.lock) st.width = 4 * lam();
+    if (!st.custom) regen(); else invalidate();
+    buildCards(); syncUI();
+  }
+  function paramLabel(p) {
+    const i = st.inst;
+    if (p === 'angle') return tr(i === 'steer' ? 'p_angle_steer' : i === 'jarray' ? 'p_angle_j' : i === 'uni' ? 'p_angle_uni' : 'p_angle');
+    if (p === 'n' && i === 'uni') return tr('p_n_ef');
+    if (p === 'depth' && (i === 'endfire' || i === 'uni')) return tr('p_depth_ef');
+    if (p === 'dist' && i === 'delay') return tr('p_dist');
+    return tr('p_' + p);
+  }
+  const paramFmt = (p, v) => p === 'n' ? String(Math.round(v)) : p === 'rear' ? fmtDb(v) + ' dB' : p === 'angle' ? dec(v, 0) + '°' : fmtLen(v);
+  function buildParams() {
+    const box = $('params'); box.innerHTML = '';
+    const def = P.INSTALLS[st.inst]; $('paramSec').hidden = !def.params.length;
+    for (const p of def.params) {
+      const [lo, hi, step] = P.PARAM_RANGE[p], wrap = document.createElement('div'); wrap.className = 'ctl';
+      const lab = document.createElement('label'), sp = document.createElement('span'), out = document.createElement('output');
+      sp.textContent = paramLabel(p); out.textContent = paramFmt(p, st.params[p]); lab.append(sp, out);
+      const inp = document.createElement('input'); inp.type = 'range'; inp.min = lo; inp.max = hi; inp.step = step; inp.value = st.params[p];
+      inp.oninput = () => { st.params[p] = +inp.value; st.custom = false; st.customEls = null; out.textContent = paramFmt(p, st.params[p]); regen(); syncUI(false); };
+      wrap.append(lab, inp); box.appendChild(wrap);
+    }
+  }
+  function buildProc() {
+    const t = $('procTable'); t.innerHTML = '';
+    const hd = document.createElement('tr'); for (const k of ['th_n', 'th_g', 'th_d', 'th_p', 'th_m']) { const th = document.createElement('th'); th.textContent = tr(k); hd.appendChild(th); } t.appendChild(hd);
+    scene.elements.forEach((e, i) => {
+      const r = document.createElement('tr'), td = () => document.createElement('td');
+      const a = td(); a.textContent = i + 1;
+      const g = td(), gi = document.createElement('input'); gi.type = 'number'; gi.step = 0.5; gi.value = +e.gain.toFixed(2); g.appendChild(gi);
+      const d = td(), di = document.createElement('input'); di.type = 'number'; di.step = 0.1; di.min = 0; di.value = +(e.delay * 1000).toFixed(2); d.appendChild(di);
+      const p = td(), pi = document.createElement('input'); pi.type = 'checkbox'; pi.checked = e.pol < 0; pi.title = '−'; p.appendChild(pi);
+      const m = td(), mi = document.createElement('input'); mi.type = 'checkbox'; mi.checked = !e.mute; m.appendChild(mi);
+      const edit = () => {
+        if (!st.custom) { st.custom = true; st.customEls = scene.elements.map(x => Object.assign({}, x)); scene.elements = st.customEls; }
+        const el = scene.elements[i]; el.gain = +gi.value || 0; el.delay = Math.max(0, (+di.value || 0) / 1000); el.pol = pi.checked ? -1 : 1; el.mute = !mi.checked;
+        invalidate(); syncUI(false);
+      };
+      gi.onchange = di.onchange = pi.onchange = mi.onchange = edit;
+      r.append(a, g, d, p, m); t.appendChild(r);
+    });
+  }
+  function buildBoundary() {
+    const ch = $('bndChips'); ch.innerHTML = '';
+    for (const k of ['none', 'back', 'side']) {
+      if (k === 'back' && scene.plane === 'section') continue;
+      const b = document.createElement('button'); b.textContent = tr(k === 'side' && scene.plane === 'section' ? 'b_floor' : 'b_' + k);
+      b.setAttribute('aria-pressed', String(st.bnd === k)); b.onclick = () => { st.bnd = k; invalidate(); syncUI(); }; ch.appendChild(b);
+    }
+    $('bndCtl').hidden = st.bnd === 'none';
+  }
+  function instNote() {
+    const p = st.params, l = c();
+    if (st.custom) return tr('n_custom');
+    const els = scene.elements, maxD = els.reduce((m, e) => Math.max(m, e.delay), 0);
+    return tr('n_' + st.inst, { d: fmtT(st.inst === 'endfire' || st.inst === 'uni' ? (p.depth || 0) / l : maxD), f: fmtF(l / (4 * Math.max(0.01, p.depth || 1))), dist: fmtLen(p.dist || 0) });
+  }
+  function syncUI(rebuild = true) {
+    const T = (k, v) => tr(k, v);
+    document.documentElement.lang = st.lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = T(el.dataset.i18n); });
+    // signal
+    $('o_f').textContent = fmtF(st.f); $('fnum').value = Math.round(st.f); $('f').value = fromLog(st.f, F_MIN, F_MAX); $('fq').textContent = fmtF(st.f);
+    $('o_a').textContent = Math.round(st.amp * 100) + ' %'; $('a').value = Math.round(st.amp * 100);
+    $('v').value = 1000 - fromLog(st.cyc, 0.25, 8); $('o_v').textContent = (st.tp ? F_REF + ' Hz: ' : '') + '1 ' + T('cycle') + ' = ' + fmtCycle(st.cyc);
+    $('tp').checked = st.tp; $('speednote').textContent = T(st.tp ? 'speednote_tp' : 'speednote');
+    $('s').value = fromLog(st.width, W_MIN, W_MAX); $('o_s').textContent = fmtLen(st.width); $('lock').checked = st.lock;
+    document.querySelectorAll('#octChips button').forEach(b => b.setAttribute('aria-pressed', String(Math.abs(+b.dataset.f - st.f) < 0.5)));
+    // speakers
+    if (rebuild) { buildParams(); buildCards(); buildBoundary(); }
+    buildProc();
+    $('instNote').textContent = instNote();
+    const k1 = kk(), E = P.ELEMENTS[st.elem];
+    $('elemNote').textContent = T('en_' + st.elem) + (E && E.size[0] ? ' ' + T('ka', { ka: dec(k1 * Math.max(E.size[1], 0.3) / 2, 2) }) : '');
+    $('o_bd').textContent = fmtLen(st.bdist); $('bd').value = fromLog(st.bdist, 0.02, 30); $('o_br').textContent = Math.round(st.brefl * 100) + ' %'; $('br').value = Math.round(st.brefl * 100);
+    // medium
+    const m = med(); $('tempCtl').hidden = !m.temp; $('humCtl').hidden = !m.hum; $('cCtl').hidden = st.medium !== 'custom';
+    if (m.temp) { $('t').min = m.temp[0]; $('t').max = m.temp[1]; $('t').value = st.temp; $('o_t').textContent = st.temp + ' °C'; }
+    $('h').value = st.rh; $('o_h').textContent = st.rh + ' %'; $('cc').value = fromLog(st.cc, 100, 6000); $('o_cc').textContent = Math.round(st.cc) + ' m/s';
+    $('absorb').checked = st.absorb; $('medNote').textContent = T('mn_' + st.medium);
+    const a = med().alpha(st.f, st.temp, st.rh), rho = m.rho(st.temp);
+    $('medInfo').innerHTML = T('medinfo_t', { l: fmtLen(lam()), c: dec(c(), 1) + ' m/s', rho: dec(rho, rho < 10 ? 3 : 0) + ' kg/m³', z: Math.round(rho * c()).toLocaleString(st.lang) + ' Pa·s/m',
+      a: dec(a * 1000, a * 1000 < 10 ? 2 : 1) + ' dB/km', a100: dec(a * 100, 2) + ' dB' });
+    // view
+    $('color').checked = st.color; $('hl').checked = st.hl; $('labels').checked = st.labels; $('polarOn').checked = st.polar; $('micOn').checked = st.micOn;
+    $('span').value = st.span; $('o_span').textContent = st.span + ' dB'; $('n').value = st.n; $('o_n').textContent = st.n;
+    document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === st.mode)));
+    document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cam === st.cam)));
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === st.tab)));
+    document.querySelectorAll('.panel').forEach(p => { p.hidden = p.dataset.panel !== st.tab; });
+    $('play').textContent = paused ? '▶' : '❚❚'; $('play').title = T(paused ? 'play' : 'pause');
+    cv.className = st.micOn ? 'mic' : (isTop() ? '' : 'orbit');
+    // readings
+    $('r_f').textContent = fmtF(st.f); $('r_T').textContent = fmtT(1 / st.f);
+    $('r_v').textContent = '1 ' + T('cycle') + ' = ' + fmtCycle(cycleS()) + (capped() ? ' (' + T('capped') + ')' : '');
+    $('r_c').textContent = dec(c(), 1) + ' m/s'; $('r_l').textContent = fmtLen(lam());
+    $('r_z').textContent = Math.round(m.rho(st.temp) * c()).toLocaleString(st.lang) + ' Pa·s/m';
+    $('r_a').textContent = st.absorb ? dec(a * 100, 2) + ' dB / 100 m' : '—'; $('r_s').textContent = fmtLen(st.width);
+    const els = scene.elements; let len = 0; for (const e of els) for (const e2 of els) len = Math.max(len, Math.hypot(e.x - e2.x, e.y - e2.y));
+    $('r_sys').textContent = els.length > 1 ? T('sys', { n: els.length, e: T('e_' + st.elem), len: fmtLen(len) }) : T('sys1', { e: T('e_' + st.elem) });
+    const mr = micReading(); $('r_mic').hidden = $('r_mic_k').hidden = !mr; if (mr) $('r_mic').textContent = T('mic_ro', { db: fmtDb(mr.db), ph: dec(mr.ph, 0) });
+    texDirty = true; polarDirty = true; save();
+  }
+
+  // ---------------- Wiring ----------------
+  function wire() {
+    for (const f of [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]) {
+      const b = document.createElement('button'); b.dataset.f = f; b.textContent = f >= 1000 ? f / 1000 + 'k' : f; b.onclick = () => setF(f); $('octChips').appendChild(b);
+    }
+    $('f').oninput = () => setF(toLog(+$('f').value, F_MIN, F_MAX));
+    $('fnum').onchange = () => setF(+$('fnum').value || st.f);
+    for (const id of ['half', 'half2']) $(id).onclick = () => setF(st.f / 2);
+    for (const id of ['dbl', 'dbl2']) $(id).onclick = () => setF(st.f * 2);
+    for (const id of ['fitL', 'fitL2']) $(id).onclick = fit4;
+    for (const id of ['fitS', 'fitS2']) $(id).onclick = fitScene;
+    $('a').oninput = () => { st.amp = +$('a').value / 100; syncUI(false); };
+    $('v').oninput = () => { st.cyc = toLog(1000 - +$('v').value, 0.25, 8); syncUI(false); };
+    $('tp').onchange = () => { st.tp = $('tp').checked; syncUI(false); };
+    $('s').oninput = () => { st.width = toLog(+$('s').value, W_MIN, W_MAX); invalidateView(); syncUI(false); };
+    $('lock').onchange = () => { st.lock = $('lock').checked; syncUI(false); };
+    $('procReset').onclick = () => { st.custom = false; st.customEls = null; regen(); syncUI(); };
+    $('bd').oninput = () => { st.bdist = toLog(+$('bd').value, 0.02, 30); invalidate(); syncUI(false); };
+    $('br').oninput = () => { st.brefl = +$('br').value / 100; invalidate(); syncUI(false); };
+    $('t').oninput = () => { st.temp = +$('t').value; if (!st.custom) regen(); else invalidate(); syncUI(false); };
+    $('h').oninput = () => { st.rh = +$('h').value; invalidate(); syncUI(false); };
+    $('cc').oninput = () => { st.cc = toLog(+$('cc').value, 100, 6000); if (!st.custom) regen(); else invalidate(); syncUI(false); };
+    $('absorb').onchange = () => { st.absorb = $('absorb').checked; invalidate(); syncUI(false); };
+    $('color').onchange = () => { st.color = $('color').checked; syncUI(false); };
+    $('hl').onchange = () => { st.hl = $('hl').checked; syncUI(false); };
+    $('labels').onchange = () => { st.labels = $('labels').checked; syncUI(false); };
+    $('polarOn').onchange = () => { st.polar = $('polarOn').checked; syncUI(false); };
+    $('micOn').onchange = () => { st.micOn = $('micOn').checked; syncUI(false); };
+    $('span').oninput = () => { st.span = +$('span').value; syncUI(false); };
+    $('n').onchange = () => { st.n = +$('n').value; buildParticles(); syncUI(false); };
+    document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => { st.mode = b.dataset.mode; syncUI(false); });
+    document.querySelectorAll('#camSeg button').forEach(b => b.onclick = () => setCam(b.dataset.cam));
+    document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { st.tab = b.dataset.tab; syncUI(false); });
+    $('play').onclick = () => { paused = !paused; syncUI(false); };
+    $('lang').value = st.lang; $('lang').onchange = () => { st.lang = $('lang').value; syncUI(); buildExamples(); buildKeys(); };
+    $('theme').onclick = () => { const d = document.documentElement, dark = d.dataset.theme ? d.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; d.dataset.theme = dark ? 'light' : 'dark'; readTokens(); syncUI(); };
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readTokens(); syncUI(); });
+    $('roToggle').onclick = () => $('ro').classList.toggle('collapsed');
+    $('helpBtn').onclick = () => { $('help').hidden = false; };
+    $('helpClose').onclick = () => { $('help').hidden = true; };
+    $('help').onclick = e => { if (e.target === $('help')) $('help').hidden = true; };
+    $('exBtn').onclick = e => { e.stopPropagation(); const m = $('exMenu'); m.hidden = !m.hidden; $('exBtn').setAttribute('aria-expanded', String(!m.hidden)); };
+    document.addEventListener('click', e => { if (!$('exMenu').hidden && !$('exMenu').contains(e.target)) { $('exMenu').hidden = true; $('exBtn').setAttribute('aria-expanded', 'false'); } });
+    // pointer: drag rotates (any camera), a click places the microphone
+    let drag = null;
+    cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, az: cam.az, el: cam.el, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } });
+    cv.addEventListener('pointermove', e => {
+      if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+      drag.moved = true; cam.az = drag.az - dx * 0.01; cam.el = Math.min(PI / 2, Math.max(0.1, drag.el + dy * 0.01));
+      st.cam = isTop() ? 'top' : 'free'; order = null; invalidateView(); syncCamButtons();
+    });
+    const up = e => {
+      if (drag && !drag.moved && st.micOn && lastProj) {
+        const r = cv.getBoundingClientRect(), Xs = e.clientX - r.left, Ys = e.clientY - r.top, pr = lastProj;
+        // invert the floor projection (z = 0): solve the 2×2 affine map
+        const a = pr.sc * pr.ca, b = -pr.sc * pr.sa, c2 = pr.sc * pr.sa * pr.se, d = pr.sc * pr.ca * pr.se, X0 = pr.X(pr.R.cx, pr.R.cy), Y0 = pr.Y(pr.R.cx, pr.R.cy, 0);
+        const det = a * d - b * c2, u = Xs - X0, v = Ys - Y0;
+        st.mic = { x: pr.R.cx + (d * u - b * v) / det, y: pr.R.cy + (-c2 * u + a * v) / det }; syncUI(false);
+      }
+      drag = null;
+    };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { drag = null; });
+    cv.addEventListener('dblclick', () => setCam(st.cam === 'top' ? 'top' : 'iso'));
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' && (e.target.type === 'number' || e.target.type === 'text')) return;
+      if (e.target.tagName === 'SELECT') return;
+      const k = e.key, semi = Math.pow(2, 1 / 12);
+      if (k === 'ArrowRight' || k === 'ArrowUp') { setF(st.f * (e.shiftKey ? 2 : semi)); e.preventDefault(); }
+      else if (k === 'ArrowLeft' || k === 'ArrowDown') { setF(st.f / (e.shiftKey ? 2 : semi)); e.preventDefault(); }
+      else if (k === ' ') { paused = !paused; syncUI(false); e.preventDefault(); }
+      else if (k === 'f' || k === 'F') fit4();
+      else if (k === 'g' || k === 'G') fitScene();
+      else if (k === 't' || k === 'T') { st.tp = !st.tp; syncUI(false); }
+      else if (k === 'm' || k === 'M') { st.micOn = !st.micOn; syncUI(false); }
+      else if (k === 'c' || k === 'C') { const cs = ['top', 'iso', 'low']; setCam(cs[(cs.indexOf(st.cam) + 1) % 3]); }
+      else if (k >= '1' && k <= '5') { st.mode = ['molecules', 'ripple', 'spl', 'surface', 'block'][+k - 1]; syncUI(false); }
+      else if (k === '?') $('help').hidden = !$('help').hidden;
+      else if (k === 'Escape') { $('help').hidden = true; $('exMenu').hidden = true; }
+    });
+    window.addEventListener('resize', resize);
+  }
+  function setCam(id) { st.cam = id; Object.assign(cam, CAMS[id] || CAMS.iso); order = null; invalidateView(); syncUI(false); }
+  function syncCamButtons() { document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cam === st.cam))); cv.className = st.micOn ? 'mic' : (isTop() ? '' : 'orbit'); }
+
+  // ---------------- Examples ----------------
+  const EXAMPLES = [
+    ['simple', () => { reset(); st.f = 1000; st.mode = 'molecules'; setCam0('top'); setInst('single', true); st.elem = 'point'; regen(); fit4(); }],
+    ['beam', () => { reset(); setInst('single', true); st.elem = 'box'; st.f = 2000; st.mode = 'ripple'; regen(); st.width = 4; st.polar = true; setCam0('top'); }],
+    ['comb', () => { reset(); setInst('lr', true); st.elem = 'box'; st.params.width = 3; st.f = 1000; regen(); st.mode = 'spl'; st.width = 14; setCam0('top'); }],
+    ['alley', () => { reset(); setInst('lr'); st.mode = 'spl'; st.width = 50; setCam0('top'); }],
+    ['gradient', () => { reset(); setInst('gradient'); st.mode = 'spl'; st.polar = true; st.width = 30; setCam0('top'); }],
+    ['invstack', () => { reset(); setInst('invstack'); st.mode = 'spl'; st.polar = true; st.width = 30; setCam0('top'); }],
+    ['endfire', () => { reset(); setInst('endfire'); st.mode = 'spl'; st.polar = true; st.width = 40; setCam0('top'); }],
+    ['arc', () => { reset(); setInst('arc'); st.mode = 'spl'; st.polar = true; st.width = 50; setCam0('top'); }],
+    ['arcdelay', () => { reset(); setInst('arcdelay'); st.mode = 'spl'; st.polar = true; st.width = 50; setCam0('top'); }],
+    ['steer', () => { reset(); setInst('steer'); st.params.spacing = 0.15; regen(); st.mode = 'ripple'; st.polar = true; st.width = 8; setCam0('top'); }],
+    ['jarray', () => { reset(); setInst('jarray'); st.f = 1000; regen(); st.mode = 'spl'; st.width = 40; setCam0('top'); }],
+    ['wall', () => { reset(); setInst('single', true); st.elem = 'sub'; st.f = 63; st.bnd = 'back'; st.bdist = 1; st.brefl = 0.95; regen(); st.mode = 'ripple'; st.width = 22; setCam0('top'); }],
+    ['delay', () => { reset(); setInst('delay'); st.mode = 'ripple'; st.width = 34; setCam0('top'); }],
+    ['helium', () => { reset(); st.medium = 'helium'; st.f = 1000; setInst('single', true); st.elem = 'point'; regen(); st.width = 1.4; st.mode = 'molecules'; setCam0('top'); }],
+    ['water', () => { reset(); st.medium = 'water'; st.f = 1000; setInst('single', true); st.elem = 'point'; regen(); st.width = 6; st.mode = 'ripple'; setCam0('top'); }],
+    ['dipole', () => { reset(); setInst('single', true); st.elem = 'dipole'; st.f = 200; regen(); st.mode = 'ripple'; st.width = 7; st.polar = true; setCam0('top'); }],
+  ];
+  function reset() { st.medium = 'air'; st.temp = 20; st.bnd = 'none'; st.custom = false; st.customEls = null; st.polar = false; st.micOn = false; st.mic = null; st.lock = true; }
+  function setCam0(id) { st.cam = id; Object.assign(cam, CAMS[id]); order = null; }
+  function buildExamples() {
+    const m = $('exMenu'); m.innerHTML = '';
+    for (const [id, fn] of EXAMPLES) {
+      const b = document.createElement('button'); b.innerHTML = '<b></b><small></small>'; b.firstChild.textContent = tr('ex_' + id); b.lastChild.textContent = tr('exd_' + id);
+      b.onclick = () => { fn(); invalidate(); m.hidden = true; buildCards(); syncUI(); }; m.appendChild(b);
+    }
+  }
+  function buildKeys() {
+    const rows = [['← →', 'k_freq'], ['Space', 'k_space'], ['F', 'k_f'], ['G', 'k_g'], ['T', 'k_t'], ['1 – 5', 'k_modes'], ['C', 'k_c'], ['M', 'k_m'], ['↔', 'k_drag'], ['?', 'k_help']];
+    $('keysTable').innerHTML = ''; for (const [k, t] of rows) { const r = document.createElement('tr'); r.innerHTML = '<td><kbd></kbd></td><td></td>'; r.querySelector('kbd').textContent = k; r.lastChild.textContent = tr(t); $('keysTable').appendChild(r); }
+  }
+
+  // ---------------- Init ----------------
+  if (!P.INSTALLS[st.inst]) st.inst = 'single';
+  if (!P.ELEMENTS[st.elem]) st.elem = 'point';
+  if (!P.MEDIA[st.medium]) st.medium = 'air';
+  if (st.cam === 'free') st.cam = 'iso';
+  Object.assign(cam, CAMS[st.cam] || CAMS.top);
+  readTokens(); resize(); buildParticles(); regen(); wire(); buildExamples(); buildKeys(); syncUI(); updateLegend();
+  if (matchMedia('(max-width: 900px)').matches) $('ro').classList.add('collapsed');
+  const hideHint = () => $('hint').classList.add('gone'); setTimeout(hideHint, 7000); cv.addEventListener('pointerdown', hideHint, { once: true });
+  requestAnimationFrame(frame);
+
+  // console checks (same numbers as the node tests)
+  window.soundFieldLab = { state: st, scene: () => scene, P };
+})();
+</script>
+</body>
+</html>
