@@ -8,19 +8,22 @@
 :root {
   --bg: #f3f2ee; --panel: #ffffff; --panel2: #f8f7f4; --ink: #1b1d1f; --muted: #686d72; --line: #dedbd3;
   --accent: #1f5fbf; --accent-ink: #ffffff; --chip: #ecebe6; --chip-on: #dfe8f8;
-  --dot: #2b2b28; --source: #c8102e; --pos: #1a9c4b; --neg: #d6322a; --hl: #e0202a; --cab: #4a4f55;
+  --dot: #2b2b28; --source: #c8102e; --pos: #1a9c4b; --neg: #d6322a; --hl: #e0202a; --cab: #34383d;
+  --edge: #737a82; --baffle: #1d2023; --cone: #4a4f56;
   --shadow: 0 1px 2px rgba(20, 22, 25, .06), 0 4px 16px rgba(20, 22, 25, .06);
   --stage: #f7f6f3;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0e1012; --panel: #16191c; --panel2: #1b1f23; --ink: #e8eaec; --muted: #9aa1a8; --line: #2a2f35;
   --accent: #7fb0ff; --accent-ink: #0e1012; --chip: #22272c; --chip-on: #233451;
-  --dot: #e6e6e2; --source: #ff6b6b; --pos: #3ddc84; --neg: #ff5a52; --hl: #ff3b3b; --cab: #8a929b;
+  --dot: #e6e6e2; --source: #ff6b6b; --pos: #3ddc84; --neg: #ff5a52; --hl: #ff3b3b; --cab: #3c4148;
+  --edge: #8a929b; --baffle: #1a1d20; --cone: #575d65;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35); --stage: #111316; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #0e1012; --panel: #16191c; --panel2: #1b1f23; --ink: #e8eaec; --muted: #9aa1a8; --line: #2a2f35;
   --accent: #7fb0ff; --accent-ink: #0e1012; --chip: #22272c; --chip-on: #233451;
-  --dot: #e6e6e2; --source: #ff6b6b; --pos: #3ddc84; --neg: #ff5a52; --hl: #ff3b3b; --cab: #8a929b;
+  --dot: #e6e6e2; --source: #ff6b6b; --pos: #3ddc84; --neg: #ff5a52; --hl: #ff3b3b; --cab: #3c4148;
+  --edge: #8a929b; --baffle: #1a1d20; --cone: #575d65;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35); --stage: #111316; color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -448,6 +451,7 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
 
   // ---------------- Loudspeaker elements ----------------
   // size = [depth along the aim, width, height] in metres; the acoustic centre is the middle of the front face.
+  // In a vertical section (flown arrays, steered columns) the extent inside the slice is the height, not the width.
   // dir(k, f, cosθ, sinθ) → directivity (signed: a dipole radiates inverted behind). plan / section variants
   // when the horizontal and vertical behaviour differ (line array element, column).
   const baffle = (ka, c) => { const q = 1 / (1 + ka * ka); return q + (1 - q) * (1 + c) / 2; };  // omni → front hemisphere
@@ -474,7 +478,9 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
       plan: (k, f, c) => { const w = hfw(f, 2000); return (1 - w) * baffle(k * 0.06, c) + w * horn(c, 150); },
       section: (k, f, c, s) => baffle(k * 0.06, c) * sinc(k * 0.6 * s) },                         // 1.2 m tall column
     dipole:  { size: [0.06, 0.6, 0.9], dir: (k, f, c) => c },                                    // open baffle: figure of eight
+    mini:    { size: [0.16, 0.14, 0.12], dir: (k, f, c, s) => baffle(k * 0.05, c) * piston(k * 0.05 * s) },  // 4-inch module (steered columns)
   };
+  const sizeIn = (type, plane) => { const sz = (ELEMENTS[type] || ELEMENTS.point).size; return plane === 'section' ? [sz[0], sz[2], sz[1]] : sz; };
   const dirFn = (type, plane) => { const E = ELEMENTS[type] || ELEMENTS.point; return plane === 'section' && E.section ? E.section : (E.plan || E.dir); };
 
   // ---------------- Installations ----------------
@@ -490,7 +496,7 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     endfire:  { params: ['n', 'depth'], def: { n: 4, depth: 1.07 }, elem: 'sub' },
     lr:       { params: ['width'], def: { width: 12 }, elem: 'sub' },
     uni:      { params: ['n', 'depth', 'width', 'angle'], def: { n: 4, depth: 1.07, width: 12, angle: 10 }, elem: 'sub' },
-    steer:    { params: ['n', 'spacing', 'angle'], def: { n: 12, spacing: 0.5, angle: 20 }, elem: 'box' },
+    steer:    { params: ['n', 'spacing', 'angle'], def: { n: 16, spacing: 0.12, angle: 15 }, elem: 'mini', plane: 'section' },
     jarray:   { params: ['n', 'angle'], def: { n: 12, angle: 30 }, elem: 'line', plane: 'section' },
     delay:    { params: ['dist'], def: { dist: 20 }, elem: 'box' },
   };
@@ -530,7 +536,7 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
           for (let i = 0; i < n; i++) out.push(E(-i * p.depth * ax, sg * p.width / 2 - i * p.depth * ay, a, { delay: (n - 1 - i) * p.depth / c }));
         }
         break;
-      case 'steer': {                                            // straight line, linear delay ramp: beam steered by angle
+      case 'steer': {                                            // hanging column, linear delay ramp: beam tilted by angle (+ = down)
         const s = Math.sin(p.angle * DEG), ys = []; for (let i = 0; i < n; i++) ys.push(across(i, p.spacing));
         const m = Math.min(...ys.map(y => y * s));
         for (const y of ys) out.push(E(0, y, 0, { delay: (y * s - m) / c }));
@@ -559,7 +565,7 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     const list = [];
     let wsum = 0, cx = 0, cy = 0, nn = 0, minX = Infinity, maxY = -Infinity;
     for (const e of elements) {
-      const sz = (ELEMENTS[e.type] || ELEMENTS.point).size;
+      const sz = sizeIn(e.type, plane);
       minX = Math.min(minX, e.x - sz[0] - 0.1); maxY = Math.max(maxY, e.y + sz[1] / 2 + 0.1);
       if (e.mute) continue;
       const g = Math.pow(10, e.gain / 20), ph = -2 * PI * f * e.delay;
@@ -624,7 +630,7 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     return L;
   }
 
-  const api = { PI, DEG, bessj1, isoAbsorption, thorp, MEDIA, ELEMENTS, INSTALLS, PARAM_RANGE, layout, buildSources, evaluate, polar, dirFn, horn, baffle };
+  const api = { PI, DEG, bessj1, isoAbsorption, thorp, MEDIA, ELEMENTS, INSTALLS, PARAM_RANGE, layout, buildSources, evaluate, polar, dirFn, sizeIn, horn, baffle };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SFP = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -635,7 +641,7 @@ const I18N = {
     r_f: 'Frequency', r_T: 'Period', r_v: 'On screen', r_c: 'Speed of sound', r_l: 'Wavelength', r_z: 'Impedance ρc',
     r_a: 'Absorption', r_s: 'Screen width', r_sys: 'System', r_mic: 'Microphone',
     m_mol: 'Molecules', m_rip: 'Pressure', m_spl: 'SPL map', m_surf: 'Surface', m_block: 'Air block',
-    c_top: 'Top', c_low: 'Low', fit4: 'Fit 4 λ', fitscene: 'Fit scene', fit4l: 'Fit 4 wavelengths',
+    c_top: 'Top', c_side: 'Side', c_low: 'Low', fit4: 'Fit 4 λ', fitscene: 'Fit scene', fit4l: 'Fit 4 wavelengths',
     legend: 'Level (dB, relative to the loudest point)', hint: 'Drag to rotate · double-click resets · ? for keys',
     t_signal: 'Signal', t_speakers: 'Speakers', t_medium: 'Medium', t_view: 'View',
     freq: 'Frequency', motion: 'Motion', amp: 'Amplitude', speed: 'Animation speed', tp: 'Time period follows frequency',
@@ -668,7 +674,7 @@ const I18N = {
     n_endfire: 'Subs in line along the axis, the front ones delayed by spacing / c ({d} each): everything adds in front, little goes back.',
     n_lr: 'Two sources far apart playing the same signal: the "power alley" in the middle and the comb of nulls across the room.',
     n_uni: 'Two end-fire lines on the wings, splayed outwards: directional low end without a centre cluster.',
-    n_steer: 'Straight line with a linear delay ramp: the beam turns by the angle without moving a box. Watch for grating lobes when the spacing passes λ/2.',
+    n_steer: 'Hanging column of small drivers with a linear delay ramp: the beam tilts by the angle (positive = down) without moving a box, as in DSP-steered columns. Watch for grating lobes when the spacing passes λ/2.',
     n_jarray: 'Flown line array seen from the side: straight on top for the far throw, curved at the bottom for the front rows.',
     n_delay: 'Main system and a delay loudspeaker {dist} downstream, delayed by {d} so they arrive together.',
     n_custom: 'You edited the processing: the layout keeps your values.',
@@ -677,7 +683,7 @@ const I18N = {
     p_angle_uni: 'Splay outwards', p_n_ef: 'Elements per line', p_depth_ef: 'Spacing along the axis',
     // elements
     e_point: 'Point', e_sub: 'Sub 18"', e_cardsub: 'Cardioid sub', e_box: 'Full range 12"', e_line: 'Line array box',
-    e_column: 'Column', e_dipole: 'Dipole',
+    e_column: 'Column', e_dipole: 'Dipole', e_mini: 'Small 4"',
     en_point: 'Ideal simple source: the same in every direction.',
     en_sub: 'Box with one 18-inch driver: omnidirectional when the wavelength is large, more forward at the top of its band.',
     en_cardsub: 'Self-cardioid sub (rear drivers and processing inside the box): about 6 dB down at 90°, deep null behind.',
@@ -685,6 +691,7 @@ const I18N = {
     en_line: 'Line array element: 110° horizontal; in the vertical section it is a 35 cm line source.',
     en_column: 'Column of small drivers, 1.2 m tall: wide horizontally, narrow vertically.',
     en_dipole: 'Open baffle: front and back in opposite polarity, nulls on the sides.',
+    en_mini: 'Small 4-inch driver in a box, the building block of DSP-steered columns: almost omnidirectional up to a few kHz.',
     ka: 'ka = {ka}',
     // boundary
     b_none: 'Free field', b_back: 'Wall behind', b_side: 'Side wall', b_floor: 'Floor',
@@ -710,7 +717,7 @@ const I18N = {
     ex_endfire: 'End-fire 4 subs', exd_endfire: '1.07 m, 0 / 3.1 / 6.2 / 9.3 ms at 80 Hz',
     ex_arc: 'Physical arc', exd_arc: '8 subs on a 60° arc at 80 Hz',
     ex_arcdelay: 'Arc delay', exd_arcdelay: 'Same 8 subs in a straight line, delayed like the arc',
-    ex_steer: 'Steered line', exd_steer: '12 boxes, 20° steering by delay at 1 kHz',
+    ex_steer: 'Steered line', exd_steer: '16 small drivers hanging, beam tilted 15° down by delay, 1 kHz',
     ex_jarray: 'Line array J', exd_jarray: '12 elements, 30° total splay, vertical section, 1 kHz',
     ex_wall: 'Sub near a wall', exd_wall: 'One sub 1 m from a wall behind at 63 Hz',
     ex_delay: 'Delay tower', exd_delay: 'Main and delay 20 m apart at 250 Hz',
@@ -727,7 +734,7 @@ const I18N = {
     r_f: 'Frecuencia', r_T: 'Período', r_v: 'En pantalla', r_c: 'Velocidad del sonido', r_l: 'Longitud de onda', r_z: 'Impedancia ρc',
     r_a: 'Absorción', r_s: 'Ancho de pantalla', r_sys: 'Sistema', r_mic: 'Micrófono',
     m_mol: 'Moléculas', m_rip: 'Presión', m_spl: 'Mapa SPL', m_surf: 'Superficie', m_block: 'Bloque de aire',
-    c_top: 'Arriba', c_low: 'Bajo', fit4: 'Ajustar 4 λ', fitscene: 'Ajustar escena', fit4l: 'Ajustar 4 longitudes de onda',
+    c_top: 'Arriba', c_side: 'Lateral', c_low: 'Bajo', fit4: 'Ajustar 4 λ', fitscene: 'Ajustar escena', fit4l: 'Ajustar 4 longitudes de onda',
     legend: 'Nivel (dB, relativo al punto más fuerte)', hint: 'Arrastra para girar · doble clic reinicia · ? para teclas',
     t_signal: 'Señal', t_speakers: 'Altavoces', t_medium: 'Medio', t_view: 'Vista',
     freq: 'Frecuencia', motion: 'Movimiento', amp: 'Amplitud', speed: 'Velocidad de animación', tp: 'El período sigue la frecuencia',
@@ -759,7 +766,7 @@ const I18N = {
     n_endfire: 'Subs en línea sobre el eje, los delanteros retrasados separación / c ({d} cada uno): todo suma al frente, poco va hacia atrás.',
     n_lr: 'Dos fuentes separadas con la misma señal: el "power alley" en el centro y el peine de nulos a lo ancho de la sala.',
     n_uni: 'Dos líneas end-fire en las alas, abiertas hacia afuera: graves direccionales sin cluster central.',
-    n_steer: 'Línea recta con una rampa lineal de delay: el haz gira sin mover ninguna caja. Cuidado con los lóbulos de rejilla cuando la separación supera λ/2.',
+    n_steer: 'Columna colgada de drivers pequeños con una rampa lineal de delay: el haz se inclina según el ángulo (positivo = hacia abajo) sin mover ninguna caja, como en las columnas direccionadas por DSP. Cuidado con los lóbulos de rejilla cuando la separación supera λ/2.',
     n_jarray: 'Line array colgado visto de lado: recto arriba para el tiro largo, curvo abajo para las primeras filas.',
     n_delay: 'Sistema principal y un altavoz de delay {dist} más adelante, retrasado {d} para que lleguen juntos.',
     n_custom: 'Editaste el procesamiento: la disposición conserva tus valores.',
@@ -767,7 +774,7 @@ const I18N = {
     p_width: 'Distancia entre lados', p_dist: 'Distancia', p_angle_steer: 'Ángulo de direccionamiento', p_angle_j: 'Apertura total',
     p_angle_uni: 'Apertura hacia afuera', p_n_ef: 'Elementos por línea', p_depth_ef: 'Separación sobre el eje',
     e_point: 'Punto', e_sub: 'Sub 18"', e_cardsub: 'Sub cardioide', e_box: 'Rango completo 12"', e_line: 'Caja de line array',
-    e_column: 'Columna', e_dipole: 'Dipolo',
+    e_column: 'Columna', e_dipole: 'Dipolo', e_mini: 'Pequeño 4"',
     en_point: 'Fuente simple ideal: igual en todas las direcciones.',
     en_sub: 'Caja con un driver de 18 pulgadas: omnidireccional cuando la longitud de onda es grande, más hacia adelante en lo alto de su banda.',
     en_cardsub: 'Sub cardioide en una sola caja (drivers traseros y procesamiento interno): unos 6 dB menos a 90°, nulo profundo detrás.',
@@ -775,6 +782,7 @@ const I18N = {
     en_line: 'Elemento de line array: 110° horizontal; en la sección vertical es una fuente lineal de 35 cm.',
     en_column: 'Columna de drivers pequeños, 1,2 m de alto: amplia en horizontal, estrecha en vertical.',
     en_dipole: 'Pantalla abierta: frente y fondo en polaridad opuesta, nulos a los lados.',
+    en_mini: 'Driver pequeño de 4 pulgadas en caja, la pieza básica de las columnas direccionadas por DSP: casi omnidireccional hasta algunos kHz.',
     ka: 'ka = {ka}',
     b_none: 'Campo libre', b_back: 'Pared detrás', b_side: 'Pared lateral', b_floor: 'Suelo',
     md_air: 'Aire', md_helium: 'Helio', md_hydrogen: 'Hidrógeno', md_co2: 'CO₂ / humo de hielo seco', md_water: 'Agua', md_seawater: 'Agua de mar',
@@ -797,7 +805,7 @@ const I18N = {
     ex_endfire: 'End-fire 4 subs', exd_endfire: '1,07 m, 0 / 3,1 / 6,2 / 9,3 ms a 80 Hz',
     ex_arc: 'Arco físico', exd_arc: '8 subs en un arco de 60° a 80 Hz',
     ex_arcdelay: 'Arco por delay', exd_arcdelay: 'Los mismos 8 subs en línea recta, retrasados como el arco',
-    ex_steer: 'Línea direccionada', exd_steer: '12 cajas, 20° por delay a 1 kHz',
+    ex_steer: 'Línea direccionada', exd_steer: '16 drivers pequeños colgados, haz inclinado 15° hacia abajo por delay, 1 kHz',
     ex_jarray: 'Line array J', exd_jarray: '12 elementos, 30° de apertura, sección vertical, 1 kHz',
     ex_wall: 'Sub cerca de una pared', exd_wall: 'Un sub a 1 m de una pared detrás a 63 Hz',
     ex_delay: 'Torre de delay', exd_delay: 'Principal y delay a 20 m a 250 Hz',
@@ -813,7 +821,7 @@ const I18N = {
     r_f: 'Frequenza', r_T: 'Periodo', r_v: 'A schermo', r_c: 'Velocità del suono', r_l: 'Lunghezza d’onda', r_z: 'Impedenza ρc',
     r_a: 'Assorbimento', r_s: 'Larghezza schermo', r_sys: 'Sistema', r_mic: 'Microfono',
     m_mol: 'Molecole', m_rip: 'Pressione', m_spl: 'Mappa SPL', m_surf: 'Superficie', m_block: 'Blocco d’aria',
-    c_top: 'Alto', c_low: 'Basso', fit4: 'Adatta 4 λ', fitscene: 'Adatta scena', fit4l: 'Adatta 4 lunghezze d’onda',
+    c_top: 'Alto', c_side: 'Lato', c_low: 'Basso', fit4: 'Adatta 4 λ', fitscene: 'Adatta scena', fit4l: 'Adatta 4 lunghezze d’onda',
     legend: 'Livello (dB, rispetto al punto più forte)', hint: 'Trascina per ruotare · doppio clic riporta · ? per i tasti',
     t_signal: 'Segnale', t_speakers: 'Diffusori', t_medium: 'Mezzo', t_view: 'Vista',
     freq: 'Frequenza', motion: 'Movimento', amp: 'Ampiezza', speed: 'Velocità animazione', tp: 'Il periodo segue la frequenza',
@@ -845,7 +853,7 @@ const I18N = {
     n_endfire: 'Sub in fila lungo l’asse, quelli davanti ritardati di distanza / c ({d} ciascuno): tutto somma davanti, poco va indietro.',
     n_lr: 'Due sorgenti lontane con lo stesso segnale: il "power alley" al centro e il pettine di nulli lungo la sala.',
     n_uni: 'Due linee end-fire sulle ali, aperte verso l’esterno: basse direttive senza cluster centrale.',
-    n_steer: 'Linea dritta con una rampa lineare di ritardi: il fascio gira senza muovere le casse. Attenzione ai lobi di reticolo quando la distanza supera λ/2.',
+    n_steer: 'Colonna appesa di piccoli altoparlanti con una rampa lineare di ritardi: il fascio si inclina dell’angolo (positivo = verso il basso) senza muovere le casse, come nelle colonne orientate via DSP. Attenzione ai lobi di reticolo quando la distanza supera λ/2.',
     n_jarray: 'Line array appeso visto di lato: dritto in alto per il tiro lungo, curvo in basso per le prime file.',
     n_delay: 'Impianto principale e un diffusore di ritardo {dist} più avanti, ritardato di {d} perché arrivino insieme.',
     n_custom: 'Hai modificato il processing: la disposizione tiene i tuoi valori.',
@@ -853,7 +861,7 @@ const I18N = {
     p_width: 'Distanza tra i lati', p_dist: 'Distanza', p_angle_steer: 'Angolo di orientamento', p_angle_j: 'Apertura totale',
     p_angle_uni: 'Apertura verso l’esterno', p_n_ef: 'Elementi per linea', p_depth_ef: 'Distanza lungo l’asse',
     e_point: 'Punto', e_sub: 'Sub 18"', e_cardsub: 'Sub cardioide', e_box: 'Full range 12"', e_line: 'Cassa line array',
-    e_column: 'Colonna', e_dipole: 'Dipolo',
+    e_column: 'Colonna', e_dipole: 'Dipolo', e_mini: 'Piccolo 4"',
     en_point: 'Sorgente semplice ideale: uguale in tutte le direzioni.',
     en_sub: 'Cassa con un altoparlante da 18 pollici: omnidirezionale quando la lunghezza d’onda è grande, più in avanti in cima alla sua banda.',
     en_cardsub: 'Sub cardioide in una sola cassa (altoparlanti posteriori e processing interno): circa 6 dB in meno a 90°, nullo profondo dietro.',
@@ -861,6 +869,7 @@ const I18N = {
     en_line: 'Elemento di line array: 110° in orizzontale; nella sezione verticale è una sorgente lineare di 35 cm.',
     en_column: 'Colonna di piccoli altoparlanti, alta 1,2 m: larga in orizzontale, stretta in verticale.',
     en_dipole: 'Pannello aperto: davanti e dietro in polarità opposta, nulli sui lati.',
+    en_mini: 'Piccolo altoparlante da 4 pollici in cassa, il mattone delle colonne orientate via DSP: quasi omnidirezionale fino a qualche kHz.',
     ka: 'ka = {ka}',
     b_none: 'Campo libero', b_back: 'Muro dietro', b_side: 'Muro laterale', b_floor: 'Pavimento',
     md_air: 'Aria', md_helium: 'Elio', md_hydrogen: 'Idrogeno', md_co2: 'CO₂ / fumo di ghiaccio secco', md_water: 'Acqua', md_seawater: 'Acqua di mare',
@@ -883,7 +892,7 @@ const I18N = {
     ex_endfire: 'End-fire 4 sub', exd_endfire: '1,07 m, 0 / 3,1 / 6,2 / 9,3 ms a 80 Hz',
     ex_arc: 'Arco fisico', exd_arc: '8 sub su un arco di 60° a 80 Hz',
     ex_arcdelay: 'Arc delay', exd_arcdelay: 'Gli stessi 8 sub in linea, ritardati come l’arco',
-    ex_steer: 'Linea orientata', exd_steer: '12 casse, 20° di orientamento con i ritardi a 1 kHz',
+    ex_steer: 'Linea orientata', exd_steer: '16 piccoli altoparlanti appesi, fascio inclinato di 15° verso il basso con i ritardi, 1 kHz',
     ex_jarray: 'Line array J', exd_jarray: '12 elementi, 30° di apertura, sezione verticale, 1 kHz',
     ex_wall: 'Sub vicino a un muro', exd_wall: 'Un sub a 1 m da un muro dietro a 63 Hz',
     ex_delay: 'Torre di ritardo', exd_delay: 'Principale e ritardo a 20 m a 250 Hz',
@@ -950,7 +959,7 @@ const I18N = {
   const TOK = {};
   function readTokens() {
     const cs = getComputedStyle(document.documentElement);
-    for (const k of ['bg', 'stage', 'panel', 'ink', 'muted', 'line', 'accent', 'dot', 'source', 'pos', 'neg', 'hl', 'cab']) TOK[k] = cs.getPropertyValue('--' + k).trim();
+    for (const k of ['bg', 'stage', 'panel', 'ink', 'muted', 'line', 'accent', 'dot', 'source', 'pos', 'neg', 'hl', 'cab', 'edge', 'baffle', 'cone']) TOK[k] = cs.getPropertyValue('--' + k).trim();
     for (const k of ['stage', 'pos', 'neg']) TOK[k + 'RGB'] = hexRgb(TOK[k]);
     sprites.clear(); texDirty = true;
   }
@@ -964,8 +973,10 @@ const I18N = {
     for (const k of def.params) if (st.params[k] === undefined) st.params[k] = def.def[k];
     if (st.custom && st.customEls) scene = { elements: st.customEls, plane: def.plane || 'plan' };
     else scene = P.layout(st.inst, st.params, st.elem, c());
+    if (scene.plane !== lastPlane) { lastPlane = scene.plane; if (st.cam !== 'free') Object.assign(cam, camPreset(st.cam)); order = null; }
     invalidate();
   }
+  let lastPlane = null;
   function invalidate() { ver++; S = null; polarDirty = true; texDirty = true; }
   function invalidateView() { texDirty = true; polarDirty = true; }
   const bnd = () => st.bnd === 'none' ? null : { kind: st.bnd, dist: st.bdist, refl: st.brefl };
@@ -973,20 +984,33 @@ const I18N = {
 
   // ---------------- View region and camera ----------------
   const CAMS = { top: { az: 0, el: PI / 2 }, iso: { az: PI / 4, el: Math.atan(1 / Math.SQRT2) }, low: { az: 0.45, el: 13 * DEG } };
+  // flown systems are computed in a vertical slice: there the flat view looks at it from the side
+  const camPreset = id => scene.plane === 'section' && id === 'top' ? { az: 0, el: 0 } : (CAMS[id] || CAMS.iso);
   const cam = Object.assign({}, CAMS[st.cam] || CAMS.top);
-  const isTop = () => cam.el > 1.5707;
+  const isTop = () => scene.plane === 'section' ? Math.cos(cam.az) * Math.cos(cam.el) > 0.9999 : cam.el > 1.5707;   // looking straight at the slice
   function region() {
     const Lx = st.width / 2, Ly = isTop() ? Lx * H / W : Lx, s = sources();
     return { Lx, Ly, cx: s.cx, cy: s.cy };
   }
+  // Orthographic camera. Everything is drawn in simulation coordinates (x, y in the slice, z out of it).
+  // plan: the slice is horizontal, z is up. section (flown arrays, steered columns): the slice is vertical,
+  // x forward, y down, z across. X, Y = screen position; D = depth toward the viewer; v = view direction.
   function makeProj(R, hExt) {
     const ca = Math.cos(cam.az), sa = Math.sin(cam.az), ce = Math.cos(cam.el), se = Math.sin(cam.el), top = isTop();
-    const wx = R.Lx * Math.abs(ca) + R.Ly * Math.abs(sa);
-    const wy = (R.Lx * Math.abs(sa) + R.Ly * Math.abs(ca)) * se + (top ? 0 : hExt) * ce;
-    const sc = (top ? 1 : 0.88) * Math.min(W / 2 / wx, H / 2 / wy), ox = W / 2, oy = H / 2;
-    const X = (x, y) => ox + sc * ((x - R.cx) * ca - (y - R.cy) * sa);
-    const Y = (x, y, z) => oy + sc * (((x - R.cx) * sa + (y - R.cy) * ca) * se - (z || 0) * ce);
-    return { sc, ca, sa, ce, se, top, X, Y, R };
+    const sec = scene.plane === 'section';
+    const rX = sec ? [ca, 0, -sa] : [ca, -sa, 0];
+    const rY = sec ? [sa * se, ce, ca * se] : [sa * se, ca * se, -ce];
+    const rD = sec ? [sa * ce, -se, ca * ce] : [sa * ce, ca * ce, se];
+    let mx = 1e-9, my = 1e-9;
+    for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c3 of [-1, 1]) {
+      const x = a * R.Lx, y = b * R.Ly, z = top ? 0 : c3 * hExt;
+      mx = Math.max(mx, Math.abs(rX[0] * x + rX[1] * y + rX[2] * z)); my = Math.max(my, Math.abs(rY[0] * x + rY[1] * y + rY[2] * z));
+    }
+    const sc = (top ? 1 : 0.88) * Math.min(W / 2 / mx, H / 2 / my), ox = W / 2, oy = H / 2;
+    const X = (x, y, z) => ox + sc * (rX[0] * (x - R.cx) + rX[1] * (y - R.cy) + rX[2] * (z || 0));
+    const Y = (x, y, z) => oy + sc * (rY[0] * (x - R.cx) + rY[1] * (y - R.cy) + rY[2] * (z || 0));
+    const D = (x, y, z) => rD[0] * (x - R.cx) + rD[1] * (y - R.cy) + rD[2] * (z || 0);
+    return { sc, top, X, Y, D, v: rD, ex: [sc * rX[0], sc * rY[0]], ey: [sc * rX[1], sc * rY[1]], R };
   }
   // visual sizes, as in the original app (source radius 5–30 px, swing up to 60 px), converted to metres
   function vis(R) {
@@ -1066,29 +1090,41 @@ const I18N = {
       paint(b, true); return;
     }
     // 45° and low cameras: shaded spheres in a thin slab, far → near, with soft shadows on the floor
-    const zf = -hz - 0.04 * R.Lx, key = cam.az.toFixed(3) + cam.el.toFixed(3) + n;
+    const zf = -hz - 0.04 * R.Lx, key = [cam.az.toFixed(3), cam.el.toFixed(3), n, scene.plane, R.Lx, R.Ly, R.cx, R.cy].join(',');
+    const molDep = i => pr.D(P3[3 * i], P3[3 * i + 1], P3[3 * i + 2]);
     if (!order || orderKey !== key) {
-      const dep = new Float32Array(n); for (let i = 0; i < n; i++) dep[i] = (px[i] * 2 * R.Lx * pr.sa + py[i] * 2 * R.Ly * pr.ca) * pr.ce + pz[i] * hz * pr.se;
+      const dep = new Float32Array(n); for (let i = 0; i < n; i++) dep[i] = molDep(i);
       order = Array.from(dep.keys()).sort((a, b) => dep[a] - dep[b]); orderKey = key;
     }
-    floorOutline(pr, R, zf);
-    const rB = Math.max(2.2, Math.min(3.8, W / 380)), dmax = R.Lx * Math.abs(pr.sa) + R.Ly * Math.abs(pr.ca);
+    const shadows = scene.plane !== 'section';                      // shadows only on a floor under a horizontal slice
+    if (shadows) floorOutline(pr, R, zf);
+    let dmax = 1e-9; for (const a of [-1, 1]) for (const b of [-1, 1]) dmax = Math.max(dmax, Math.abs(pr.D(R.cx + a * R.Lx, R.cy + b * R.Ly, 0)));
+    const rB = Math.max(2.2, Math.min(3.8, W / 380));
     const XS = new Float32Array(n), YS = new Float32Array(n), PP = new Float32Array(n), SC = new Float32Array(n), shadow = new Path2D();
     for (let i = 0; i < n; i++) {
       const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
       const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp), z = P3[3 * i + 2] + Asc * dZ(F, o, cp, sp);
-      XS[i] = pr.X(x, y); YS[i] = pr.Y(x, y, z); PP[i] = pN(F, o, cp, sp);
-      SC[i] = 1 + 0.25 * (((P3[3 * i] - R.cx) * pr.sa + (P3[3 * i + 1] - R.cy) * pr.ca) / dmax);
-      const sy = pr.Y(x, y, zf); shadow.moveTo(XS[i] + rB, sy); shadow.ellipse(XS[i], sy, rB * 1.1, rB * 0.5, 0, 0, 2 * PI);
+      XS[i] = pr.X(x, y, z); YS[i] = pr.Y(x, y, z); PP[i] = pN(F, o, cp, sp);
+      SC[i] = 1 + 0.25 * (pr.D(P3[3 * i], P3[3 * i + 1], 0) / dmax);       // nearer = slightly larger
+      if (shadows) { const sx2 = pr.X(x, y, zf), sy = pr.Y(x, y, zf); shadow.moveTo(sx2 + rB, sy); shadow.ellipse(sx2, sy, rB * 1.1, rB * 0.5, 0, 0, 2 * PI); }
     }
-    ctx.fillStyle = TOK.ink; ctx.globalAlpha = 0.07; ctx.fill(shadow); ctx.globalAlpha = 1;
-    drawSources(pr, R, V, cp, sp, true);
+    if (shadows) { ctx.fillStyle = TOK.ink; ctx.globalAlpha = 0.07; ctx.fill(shadow); ctx.globalAlpha = 1; }
+    // cabinets and molecules in one far → near sequence (same depth measure), so nothing behind a box covers it
+    const cabs = scene.elements.filter(e => !e.mute).map(e => {
+      const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size, ux = e.x - Math.cos(e.aim) * sz[0] / 2, uy = e.y - Math.sin(e.aim) * sz[0] / 2;
+      return { e, dep: pr.D(ux, uy, 0) };
+    }).sort((a, b) => a.dep - b.dep);
+    let ci = 0;
     for (let j = 0; j < n; j++) {
-      const i = order[j]; if (!SC[i]) continue;
+      const i = order[j];
+      while (ci < cabs.length && cabs[ci].dep <= molDep(i)) { ctx.globalAlpha = 1; drawElement(pr, V, cp, sp, cabs[ci].e, 'all'); ci++; }
+      if (!SC[i]) continue;
       const p = PP[i]; ctx.globalAlpha = st.color ? 0.3 + 0.7 * Math.abs(p) : 0.9;
       ball(XS[i], YS[i], rB * SC[i], st.color ? (p >= 0 ? TOK.pos : TOK.neg) : TOK.dot);
     }
     ctx.globalAlpha = 1;
+    while (ci < cabs.length) drawElement(pr, V, cp, sp, cabs[ci++].e, 'all');
+    if (st.labels && cabs.length <= 24) drawLabels(pr, cabs.map(c2 => c2.e));
   }
 
   // ---------------- Floor textures: pressure (ripple tank) and SPL map ----------------
@@ -1101,8 +1137,8 @@ const I18N = {
     return a;
   }
   function floorTransform(pr, R, z) {
-    const ex = [pr.sc * pr.ca, pr.sc * pr.sa * pr.se], ey = [-pr.sc * pr.sa, pr.sc * pr.ca * pr.se];
-    ctx.setTransform(dpr * ex[0], dpr * ex[1], dpr * ey[0], dpr * ey[1], dpr * pr.X(R.cx, R.cy), dpr * pr.Y(R.cx, R.cy, z));
+    const ex = pr.ex, ey = pr.ey;                                     // the slice maps to the screen by an affine transform
+    ctx.setTransform(dpr * ex[0], dpr * ex[1], dpr * ey[0], dpr * ey[1], dpr * pr.X(R.cx, R.cy, z), dpr * pr.Y(R.cx, R.cy, z));
   }
   function drawTexture(pr, R) {
     ctx.save(); floorTransform(pr, R, 0); ctx.imageSmoothingEnabled = true;
@@ -1154,7 +1190,7 @@ const I18N = {
   // ---------------- Surface and air block ----------------
   function floorOutline(pr, R, z) {
     ctx.strokeStyle = TOK.line; ctx.lineWidth = 1; ctx.beginPath();
-    [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]].forEach(([a, b], i) => { const x = R.cx + a * R.Lx, y = R.cy + b * R.Ly; i ? ctx.lineTo(pr.X(x, y), pr.Y(x, y, z)) : ctx.moveTo(pr.X(x, y), pr.Y(x, y, z)); });
+    [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]].forEach(([a, b], i) => { const x = R.cx + a * R.Lx, y = R.cy + b * R.Ly; i ? ctx.lineTo(pr.X(x, y, z), pr.Y(x, y, z)) : ctx.moveTo(pr.X(x, y, z), pr.Y(x, y, z)); });
     ctx.stroke();
   }
   function drawSurface(pr, R, V, cp, sp, Hm) {
@@ -1168,7 +1204,8 @@ const I18N = {
     for (let j = 0; j < m1; j++) for (let i = 0; i < n1; i++) {
       const id = j * n1 + i, o = 9 * id; if (Number.isNaN(F[o + 6])) continue;
       const x = R.cx - R.Lx + i * 2 * R.Lx / N, y = R.cy - R.Ly + j * 2 * R.Ly / Ny;
-      OK[id] = 1; SX[id] = pr.X(x, y); SY[id] = pr.Y(x, y, Hm * pRaw(F, o, cp, sp) / s.wsum); PP[id] = pN(F, o, cp, sp);
+      const hz2 = Hm * pRaw(F, o, cp, sp) / s.wsum;
+      OK[id] = 1; SX[id] = pr.X(x, y, hz2); SY[id] = pr.Y(x, y, hz2); PP[id] = pN(F, o, cp, sp);
     }
     floorOutline(pr, R, 0);
     const b = newBuckets();
@@ -1178,16 +1215,17 @@ const I18N = {
     if (2 * R.Lx / lam() > 13) tooFine();
   }
   function drawBlock(pr, R, V, cp, sp) {
-    const s = sources(), L = R.Lx, sx = Math.sign(pr.sa) || 1, sy = Math.sign(pr.ca) || 1, cx = R.cx, cy = R.cy;
-    const fc = field('block', [sx, sy, L, cx, cy, qIn[0].length].join(','), () => {
+    const s = sources(), L = R.Lx, cx = R.cx, cy = R.cy, v = pr.v;
+    const sx = Math.sign(v[0]) || 1, sy = Math.sign(v[1]) || 1, sz = Math.sign(v[2]) || 1;   // the eighth facing the camera is removed
+    const fc = field('block', [sx, sy, sz, L, cx, cy, qIn[0].length].join(','), () => {
       const a = [];
       for (let i = 0; i < qIn[0].length; i += 2) {
-        a.push(cx, cy + sy * qIn[0][i] * L, qIn[0][i + 1] * L); a.push(cx + sx * qIn[1][i] * L, cy, qIn[1][i + 1] * L); a.push(cx + sx * qIn[2][i] * L, cy + sy * qIn[2][i + 1] * L, 0);
+        a.push(cx, cy + sy * qIn[0][i] * L, sz * qIn[0][i + 1] * L); a.push(cx + sx * qIn[1][i] * L, cy, sz * qIn[1][i + 1] * L); a.push(cx + sx * qIn[2][i] * L, cy + sy * qIn[2][i + 1] * L, 0);
       }
       for (let i = 0; i < qOut[0].length; i += 2) {
-        const u = qOut[0][i], v = qOut[0][i + 1]; if (!(u * sx > 0 && v * sy > 0)) a.push(cx + u * L, cy + v * L, L);
-        const u1 = qOut[1][i], v1 = qOut[1][i + 1]; if (!(u1 * sy > 0 && v1 > 0)) a.push(cx + sx * L, cy + u1 * L, v1 * L);
-        const u2 = qOut[2][i], v2 = qOut[2][i + 1]; if (!(u2 * sx > 0 && v2 > 0)) a.push(cx + u2 * L, cy + sy * L, v2 * L);
+        const u = qOut[0][i], w = qOut[0][i + 1]; if (!(u * sx > 0 && w * sy > 0)) a.push(cx + u * L, cy + w * L, sz * L);
+        const u1 = qOut[1][i], v1 = qOut[1][i + 1]; if (!(u1 * sy > 0 && v1 * sz > 0)) a.push(cx + sx * L, cy + u1 * L, v1 * L);
+        const u2 = qOut[2][i], v2 = qOut[2][i + 1]; if (!(u2 * sx > 0 && v2 * sz > 0)) a.push(cx + u2 * L, cy + sy * L, v2 * L);
       }
       return new Float32Array(a);
     }, 'visual', V.r0), F = fc.F, P3 = fc.P3, n = P3.length / 3, Asc = V.A / s.wsum;
@@ -1195,69 +1233,164 @@ const I18N = {
     for (let i = 0; i < n; i++) {
       const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
       const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp), z = P3[3 * i + 2] + Asc * dZ(F, o, cp, sp);
-      const X = pr.X(x, y), Y = pr.Y(x, y, z); b[st.color ? bIdx(pN(F, o, cp, sp)) : NB - 1].rect(X - d / 2, Y - d / 2, d, d);
+      const X = pr.X(x, y, z), Y = pr.Y(x, y, z); b[st.color ? bIdx(pN(F, o, cp, sp)) : NB - 1].rect(X - d / 2, Y - d / 2, d, d);
     }
     paint(b, true);
     ctx.strokeStyle = TOK.muted; ctx.globalAlpha = 0.6; ctx.lineWidth = 1;
-    const sg = (a, b2, c2, d2, e, f) => { ctx.beginPath(); ctx.moveTo(pr.X(cx + a, cy + b2), pr.Y(cx + a, cy + b2, c2)); ctx.lineTo(pr.X(cx + d2, cy + e), pr.Y(cx + d2, cy + e, f)); ctx.stroke(); };
-    const X0 = sx * L, Y0 = sy * L, Xb = -sx * L, Yb = -sy * L;
-    sg(Xb, Yb, L, X0, Yb, L); sg(Xb, Yb, L, Xb, Y0, L); sg(X0, Yb, L, X0, Yb, -L); sg(Xb, Y0, L, Xb, Y0, -L);
-    sg(X0, Yb, -L, X0, Y0, -L); sg(Xb, Y0, -L, X0, Y0, -L); sg(X0, Y0, -L, X0, Y0, 0); sg(X0, Yb, L, X0, 0, L); sg(Xb, Y0, L, 0, Y0, L);
-    sg(X0, 0, L, X0, 0, 0); sg(0, Y0, L, 0, Y0, 0); sg(X0, 0, 0, 0, 0, 0); sg(0, Y0, 0, 0, 0, 0); sg(0, 0, L, 0, 0, 0);
-    sg(X0, 0, L, 0, 0, L); sg(0, Y0, L, 0, 0, L); sg(X0, Y0, 0, X0, 0, 0); sg(X0, Y0, 0, 0, Y0, 0);
+    const sg = (a, b2, c2, d2, e, f) => { ctx.beginPath(); ctx.moveTo(pr.X(cx + a, cy + b2, c2), pr.Y(cx + a, cy + b2, c2)); ctx.lineTo(pr.X(cx + d2, cy + e, f), pr.Y(cx + d2, cy + e, f)); ctx.stroke(); };
+    const X0 = sx * L, Y0 = sy * L, Xb = -sx * L, Yb = -sy * L, Z = sz * L;
+    sg(Xb, Yb, Z, X0, Yb, Z); sg(Xb, Yb, Z, Xb, Y0, Z); sg(X0, Yb, Z, X0, Yb, -Z); sg(Xb, Y0, Z, Xb, Y0, -Z);
+    sg(X0, Yb, -Z, X0, Y0, -Z); sg(Xb, Y0, -Z, X0, Y0, -Z); sg(X0, Y0, -Z, X0, Y0, 0); sg(X0, Yb, Z, X0, 0, Z); sg(Xb, Y0, Z, 0, Y0, Z);
+    sg(X0, 0, Z, X0, 0, 0); sg(0, Y0, Z, 0, Y0, 0); sg(X0, 0, 0, 0, 0, 0); sg(0, Y0, 0, 0, 0, 0); sg(0, 0, Z, 0, 0, 0);
+    sg(X0, 0, Z, 0, 0, Z); sg(0, Y0, Z, 0, 0, Z); sg(X0, Y0, 0, X0, 0, 0); sg(X0, Y0, 0, 0, Y0, 0);
     ctx.globalAlpha = 1;
   }
 
   // ---------------- Loudspeakers, boundary, labels ----------------
+  // The acoustic centre of every cabinet is the middle of its front face (z = 0): the field starts there.
+  // Its main driver is centred on that point. In the 3-D cameras the field is a slice through that centre
+  // (horizontal for ground stacks, vertical for flown arrays and steered columns, which hang), so the cabinet
+  // is drawn in two halves: the far one before the slice (the slice covers it) and the near one after.
+  // The red dust cap pulses with the signal of that box.
   function elPulse(e, cp, sp) { const ph = -2 * PI * st.f * e.delay; return e.pol * (cp * Math.cos(ph) - sp * Math.sin(ph)); }   // Re(pol·e^(i(φ−ωτ)))
-  function drawSources(pr, R, V, cp, sp, shaded) {
-    const els = scene.elements.filter(e => !e.mute);
-    const depth = e => (e.x - R.cx) * pr.sa + (e.y - R.cy) * pr.ca;
-    els.sort((a, b) => depth(a) - depth(b));
-    for (const e of els) {
-      const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size, mv = V.A * 0.6 * elPulse(e, cp, sp), ca = Math.cos(e.aim), sa = Math.sin(e.aim);
-      if (sz[0] === 0) {
-        const r = Math.max(3, (V.r0 + mv) * pr.sc), X = pr.X(e.x, e.y), Y = pr.Y(e.x, e.y, 0);
-        if (shaded || !pr.top) ball(X, Y, r, TOK.source); else { ctx.fillStyle = TOK.source; ctx.beginPath(); ctx.arc(X, Y, r, 0, 2 * PI); ctx.fill(); }
-        continue;
-      }
-      const w2 = sz[1] / 2, d = sz[0], h2 = sz[2] / 2;
-      const corner = (u, v) => [e.x + ca * u - sa * v, e.y + sa * u + ca * v];   // u along the aim (0 = front face), v across
-      const fl = corner(0, w2), fr = corner(0, -w2), bl = corner(-d, w2), br = corner(-d, -w2);
-      if (pr.top) {
-        ctx.beginPath(); [fl, bl, br, fr].forEach(([x, y], i) => i ? ctx.lineTo(pr.X(x, y), pr.Y(x, y)) : ctx.moveTo(pr.X(x, y), pr.Y(x, y))); ctx.closePath();
-        ctx.fillStyle = TOK.cab; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1;
-        const m1 = corner(mv, w2 * 0.85), m2 = corner(mv, -w2 * 0.85);
-        ctx.strokeStyle = TOK.source; ctx.lineWidth = Math.max(2, Math.min(5, sz[1] * pr.sc * 0.08));
-        ctx.beginPath(); ctx.moveTo(pr.X(...m1), pr.Y(...m1)); ctx.lineTo(pr.X(...m2), pr.Y(...m2)); ctx.stroke();
-        if (e.type === 'dipole') { const b1 = corner(-d + mv, w2 * 0.85), b2 = corner(-d + mv, -w2 * 0.85); ctx.strokeStyle = TOK.neg; ctx.beginPath(); ctx.moveTo(pr.X(...b1), pr.Y(...b1)); ctx.lineTo(pr.X(...b2), pr.Y(...b2)); ctx.stroke(); }
-        ctx.lineWidth = 1;
-      } else {
-        // prism: side faces turned to the camera, then the top
-        const quad = [fl, fr, br, bl], faces = [];
-        for (let i = 0; i < 4; i++) {
-          const a = quad[i], b = quad[(i + 1) % 4], nx = -(b[1] - a[1]), ny = b[0] - a[0];       // outward normal
-          const vis2 = nx * pr.sa + ny * pr.ca; if (vis2 <= 0) continue;
-          faces.push({ pts: [[a[0], a[1], -h2], [b[0], b[1], -h2], [b[0], b[1], h2], [a[0], a[1], h2]], front: i === 0, shade: 0.25 + 0.25 * (i % 2) });
-        }
-        faces.push({ pts: quad.map(q => [q[0], q[1], h2]), shade: -0.15 });
-        for (const f of faces) {
-          ctx.beginPath(); f.pts.forEach(([x, y, z], i) => i ? ctx.lineTo(pr.X(x, y), pr.Y(x, y, z)) : ctx.moveTo(pr.X(x, y), pr.Y(x, y, z))); ctx.closePath();
-          ctx.fillStyle = f.front ? TOK.source : (f.shade > 0 ? mix(TOK.cab, 0, f.shade) : mix(TOK.cab, 255, -f.shade)); ctx.fill();
-          ctx.strokeStyle = TOK.ink; ctx.globalAlpha = 0.35; ctx.stroke(); ctx.globalAlpha = 1;
-        }
+  // drivers on the front face: v across, z up, from the acoustic centre (metres); back: drivers on the rear face
+  const DRIVERS = {
+    sub:     { front: [{ k: 'cone', v: 0, z: 0, r: 0.23 }] },
+    cardsub: { front: [{ k: 'cone', v: 0, z: 0, r: 0.2 }], back: [{ k: 'cone', v: -0.14, z: 0, r: 0.1 }, { k: 'cone', v: 0.14, z: 0, r: 0.1 }] },
+    box:     { front: [{ k: 'cone', v: 0, z: 0, r: 0.15 }, { k: 'horn', v: 0, z: 0.235, w: 0.3, h: 0.11 }] },
+    line:    { front: [{ k: 'cone', v: -0.32, z: 0, r: 0.12 }, { k: 'cone', v: 0.32, z: 0, r: 0.12 }, { k: 'slot', v: 0, z: 0, w: 0.1, h: 0.3 }] },
+    column:  { front: Array.from({ length: 11 }, (_, i) => ({ k: 'cone', v: 0, z: (i - 5) * 0.1, r: 0.042 })) },
+    dipole:  { front: [{ k: 'cone', v: 0, z: 0, r: 0.22 }], back: [{ k: 'cone', v: 0, z: 0, r: 0.22, inv: true }] },
+    mini:    { front: [{ k: 'cone', v: 0, z: 0, r: 0.05 }] },
+  };
+  // in a vertical slice the box hangs: what was across (v) is now out of the slice, what was up (z) is now −y
+  function drivers(e, side) {
+    const L = DRIVERS[e.type] && DRIVERS[e.type][side];
+    if (!L || scene.plane !== 'section') return L;
+    return L.map(d => Object.assign({}, d, { v: -d.z, z: d.v, w: d.h, h: d.w }));
+  }
+  function cabGeom(e) {
+    const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size, ca = Math.cos(e.aim), sa = Math.sin(e.aim);
+    const sec = scene.plane === 'section';                                // in the slice: width (plan) or height (section)
+    return { d: sz[0], w2: (sec ? sz[2] : sz[1]) / 2, h2: (sec ? sz[1] : sz[2]) / 2, ca, sa, P3: (u, v, z) => [e.x + ca * u - sa * v, e.y + sa * u + ca * v, z] };
+  }
+  function poly(pr, pts) { ctx.beginPath(); pts.forEach(([x, y, z], i) => { const X = pr.X(x, y, z), Y = pr.Y(x, y, z); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath(); }
+  // drivers drawn on a face at u = uF; dir = +1 front, −1 back; mv = cone excursion (m) along the axis
+  function drivers3D(pr, g, list, uF, dir, mv, pulse) {
+    const ring = (dv, r, du, n = 32) => Array.from({ length: n }, (_, i) => { const t = 2 * PI * i / n; return g.P3(uF + du, dv.v + r * Math.cos(t), dv.z + r * Math.sin(t)); });
+    const rect = (dv, sw, sh, du) => [g.P3(uF + du, dv.v - dv.w * sw / 2, dv.z - dv.h * sh / 2), g.P3(uF + du, dv.v + dv.w * sw / 2, dv.z - dv.h * sh / 2), g.P3(uF + du, dv.v + dv.w * sw / 2, dv.z + dv.h * sh / 2), g.P3(uF + du, dv.v - dv.w * sw / 2, dv.z + dv.h * sh / 2)];
+    for (const dv of list) {
+      if (dv.k === 'cone') {
+        poly(pr, ring(dv, dv.r, 0)); ctx.fillStyle = mix(TOK.baffle, 255, 0.1); ctx.fill();                  // surround
+        poly(pr, ring(dv, dv.r * 0.84, 0)); ctx.fillStyle = TOK.cone; ctx.fill();                              // cone
+        poly(pr, ring(dv, dv.r * 0.6, 0)); ctx.fillStyle = mix(TOK.cone, 0, 0.18); ctx.fill();
+        const cap = dv.inv ? TOK.neg : TOK.source;                                                             // dust cap moves with the signal
+        poly(pr, ring(dv, dv.r * 0.3, dir * mv * (dv.inv ? -1 : 1), 20)); ctx.fillStyle = cap; ctx.globalAlpha = 0.75 + 0.25 * Math.abs(pulse); ctx.fill();
+        ctx.globalAlpha = 1;
+        poly(pr, ring({ v: dv.v - dv.r * 0.08, z: dv.z + dv.r * 0.1 }, dv.r * 0.1, dir * mv, 12)); ctx.fillStyle = mix(cap, 255, 0.55); ctx.fill();
+      } else if (dv.k === 'horn') {
+        poly(pr, rect(dv, 1, 1, 0)); ctx.fillStyle = mix(TOK.baffle, 255, 0.12); ctx.fill();
+        poly(pr, rect(dv, 0.72, 0.6, 0)); ctx.fillStyle = mix(TOK.baffle, 0, 0.5); ctx.fill();
+        poly(pr, rect(dv, 0.12, 0.25, 0)); ctx.fillStyle = TOK.source; ctx.fill();
+      } else if (dv.k === 'slot') {
+        poly(pr, rect(dv, 1, 1, 0)); ctx.fillStyle = mix(TOK.baffle, 0, 0.5); ctx.fill();
+        poly(pr, rect(dv, 0.3, 0.9, dir * mv)); ctx.fillStyle = TOK.source; ctx.globalAlpha = 0.75 + 0.25 * Math.abs(pulse); ctx.fill(); ctx.globalAlpha = 1;
       }
     }
-    if (st.labels && els.length <= 24) drawLabels(pr, els);
+  }
+  // part: 'all' (whole box), 'below' (the half behind the slice, seen from the camera), 'above' (the near half, with its cap)
+  function cabinet3D(pr, e, mv, pulse, part) {
+    const g = cabGeom(e), { d, w2, h2, P3 } = g, v = pr.v, zs = v[2] >= 0 ? 1 : -1;
+    let za = -h2, zb = h2;
+    if (part === 'below') { za = -zs * h2; zb = 0; } else if (part === 'above') { za = 0; zb = zs * h2; }
+    if (za > zb) { const t = za; za = zb; zb = t; }
+    const vxy = Math.max(1e-6, Math.hypot(v[0], v[1]));
+    const faces = [
+      { n: [g.ca, g.sa], q: [[0, -w2], [0, w2]], side: 'front', u: 0 },
+      { n: [-g.ca, -g.sa], q: [[-d, w2], [-d, -w2]], side: 'back', u: -d },
+      { n: [-g.sa, g.ca], q: [[0, w2], [-d, w2]] },
+      { n: [g.sa, -g.ca], q: [[-d, -w2], [0, -w2]] },
+    ];
+    for (const f of faces) {
+      const dot = f.n[0] * v[0] + f.n[1] * v[1]; if (dot <= 1e-6) continue;
+      const pts = [P3(f.q[0][0], f.q[0][1], za), P3(f.q[1][0], f.q[1][1], za), P3(f.q[1][0], f.q[1][1], zb), P3(f.q[0][0], f.q[0][1], zb)];
+      poly(pr, pts); ctx.fillStyle = mix(f.side ? TOK.baffle : TOK.cab, 0, 0.3 * (1 - dot / vxy)); ctx.fill();
+      const list = f.side && drivers(e, f.side);
+      if (list) { ctx.save(); poly(pr, pts); ctx.clip(); drivers3D(pr, g, list, f.u, f.side === 'front' ? 1 : -1, mv, pulse); ctx.restore(); }
+      poly(pr, pts); ctx.strokeStyle = TOK.edge; ctx.lineWidth = 1; ctx.globalAlpha = 0.7; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    if (part !== 'below') {
+      const zc = zs * h2;                                              // the cap turned toward the camera
+      poly(pr, [P3(0, -w2, zc), P3(0, w2, zc), P3(-d, w2, zc), P3(-d, -w2, zc)]);
+      ctx.fillStyle = mix(TOK.cab, 255, 0.12); ctx.fill(); ctx.strokeStyle = TOK.edge; ctx.globalAlpha = 0.8; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+  }
+  // top camera: the cabinet seen from above, cut at the height of the acoustic centre
+  function cabinet2D(pr, e, mv) {
+    const g = cabGeom(e), { d, w2 } = g;
+    const XY = (u, v) => { const p = g.P3(u, v, 0); return [pr.X(p[0], p[1]), pr.Y(p[0], p[1], 0)]; };
+    const path = pts => { ctx.beginPath(); pts.forEach(([X, Y], i) => i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y)); ctx.closePath(); };
+    const rad = Math.min(6, 0.12 * Math.min(d, 2 * w2) * pr.sc), body = [XY(0, w2), XY(-d, w2), XY(-d, -w2), XY(0, -w2)];
+    ctx.beginPath(); for (let i = 0; i < 4; i++) { const a = body[i], b = body[(i + 1) % 4], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; i ? ctx.arcTo(a[0], a[1], m[0], m[1], rad) : ctx.moveTo(m[0], m[1]); }
+    ctx.arcTo(body[0][0], body[0][1], (body[0][0] + body[1][0]) / 2, (body[0][1] + body[1][1]) / 2, rad); ctx.closePath();
+    ctx.fillStyle = TOK.cab; ctx.fill(); ctx.strokeStyle = TOK.edge; ctx.lineWidth = 1; ctx.stroke();
+    const bf = Math.min(0.04, d * 0.12);
+    path([XY(0, w2 * 0.96), XY(-bf, w2 * 0.96), XY(-bf, -w2 * 0.96), XY(0, -w2 * 0.96)]); ctx.fillStyle = TOK.baffle; ctx.fill();
+    const lw = Math.max(2, Math.min(4, 0.012 * pr.sc));
+    const cone = (dv, uF, dir, inv) => {                   // the driver cut by the horizontal plane: a trapezoid, magnet behind
+      const hw = Math.sqrt(Math.max(0, dv.r * dv.r - dv.z * dv.z)); if (hw <= 0) return;
+      const depth = Math.min(d * 0.55, dv.r * 0.9), m = dir * mv * (inv ? -1 : 1);
+      path([XY(uF + m, dv.v - hw), XY(uF + m, dv.v + hw), XY(uF - dir * depth, dv.v + hw * 0.3), XY(uF - dir * depth, dv.v - hw * 0.3)]);
+      ctx.fillStyle = TOK.cone; ctx.fill(); ctx.strokeStyle = TOK.edge; ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+      path([XY(uF - dir * depth, dv.v - hw * 0.35), XY(uF - dir * depth, dv.v + hw * 0.35), XY(uF - dir * (depth + dv.r * 0.25), dv.v + hw * 0.35), XY(uF - dir * (depth + dv.r * 0.25), dv.v - hw * 0.35)]);
+      ctx.fillStyle = mix(TOK.cone, 0, 0.35); ctx.fill();                                                  // magnet
+      ctx.strokeStyle = inv ? TOK.neg : TOK.source; ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(...XY(uF + m, dv.v - hw)); ctx.lineTo(...XY(uF + m, dv.v + hw)); ctx.stroke(); ctx.lineWidth = 1;
+    };
+    const D = { front: drivers(e, 'front'), back: drivers(e, 'back') };
+    for (const dv of D.front || []) {
+      if (dv.k === 'cone') cone(dv, 0, 1, false);
+      else if (dv.k === 'slot' && Math.abs(dv.z) < dv.h / 2) {
+        path([XY(0, dv.v - dv.w / 2), XY(0, dv.v + dv.w / 2), XY(-d * 0.5, dv.v + dv.w * 0.15), XY(-d * 0.5, dv.v - dv.w * 0.15)]);
+        ctx.fillStyle = mix(TOK.baffle, 0, 0.4); ctx.fill();
+        ctx.strokeStyle = TOK.source; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(...XY(mv, dv.v - dv.w / 2)); ctx.lineTo(...XY(mv, dv.v + dv.w / 2)); ctx.stroke(); ctx.lineWidth = 1;
+      }
+    }
+    for (const dv of D.back || []) if (dv.k === 'cone') cone(dv, -d, -1, !!dv.inv);
+  }
+  function drawSources(pr, R, V, cp, sp, part) {
+    const els = scene.elements.filter(e => !e.mute);
+    els.sort((a, b) => pr.D(a.x, a.y, 0) - pr.D(b.x, b.y, 0));
+    for (const e of els) drawElement(pr, V, cp, sp, e, part);
+    if (part !== 'below' && st.labels && els.length <= 24) drawLabels(pr, els);
+  }
+  function drawElement(pr, V, cp, sp, e, part) {
+    const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size, pulse = elPulse(e, cp, sp), mv = V.A * 0.6 * pulse;
+    if (sz[0] === 0) {
+      if (part === 'below') return;
+      const r = Math.max(3, (V.r0 + mv) * pr.sc), X = pr.X(e.x, e.y), Y = pr.Y(e.x, e.y, 0);
+      if (!pr.top) ball(X, Y, r, TOK.source); else { ctx.fillStyle = TOK.source; ctx.beginPath(); ctx.arc(X, Y, r, 0, 2 * PI); ctx.fill(); }
+      return;
+    }
+    if (pr.top) cabinet2D(pr, e, mv); else cabinet3D(pr, e, mv, pulse, part);
   }
   function drawLabels(pr, els) {
     ctx.font = '600 11.5px system-ui, -apple-system, sans-serif'; ctx.textAlign = 'center';
+    const placed = [];                                                   // a label is skipped if it would overlap one already drawn
     for (const e of els) {
       const t = []; if (e.pol < 0) t.push('−'); if (e.delay > 1e-6) t.push(dec(e.delay * 1000, 1) + ' ms'); if (Math.abs(e.gain) > 0.05) t.push(fmtDb(e.gain) + ' dB');
       if (!t.length) continue;
-      const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size, off = Math.max(sz[1], 0.2) * 0.5 + 12 / pr.sc;
-      const X = pr.X(e.x, e.y), Y = pr.Y(e.x, e.y, Math.max(sz[2] / 2, 0)) - (pr.top ? off * pr.sc : 10);
+      const g = cabGeom(e); let Y = Infinity;
+      for (const u of [0, -g.d]) for (const v2 of [-g.w2, g.w2]) for (const z of (pr.top ? [0] : [-g.h2, g.h2])) { const q = g.P3(u, v2, z); Y = Math.min(Y, pr.Y(q[0], q[1], q[2])); }
+      Y -= pr.top && g.d === 0 ? 14 : 6;
+      let X = pr.X(e.x, e.y, 0);
       const s = t.join(' · '), w = ctx.measureText(s).width + 8;
+      if (scene.plane === 'section') {                                   // hanging stacks: label behind each box, not on the box above
+        const fq = g.P3(0, 0, 0), bq = g.P3(-g.d - 0.04, 0, 0), fx = pr.X(fq[0], fq[1], 0), bx = pr.X(bq[0], bq[1], 0);
+        Y = pr.Y(bq[0], bq[1], 0) + 4; X = bx + (bx <= fx ? -w / 2 - 4 : w / 2 + 4);
+      }
+      if (placed.some(q => Math.abs(q[0] - X) < (q[2] + w) / 2 && Math.abs(q[1] - Y) < 16)) continue;
+      placed.push([X, Y, w]);
       ctx.fillStyle = TOK.panel; ctx.globalAlpha = 0.85; ctx.fillRect(X - w / 2, Y - 11, w, 15); ctx.globalAlpha = 1;
       ctx.fillStyle = TOK.ink; ctx.fillText(s, X, Y);
     }
@@ -1285,7 +1418,7 @@ const I18N = {
     ctx.beginPath(); ctx.moveTo(pr.X(x0, y0 - t), pr.Y(x0, y0 - t, 0)); ctx.lineTo(pr.X(x0, y0 + t), pr.Y(x0, y0 + t, 0)); ctx.stroke(); ctx.setLineDash([]);
     const r = pr.top ? Math.max(1.2, Math.min(2.4, W / 600)) * 3.2 : 7;
     if (pr.top) { ctx.fillStyle = TOK.hl; ctx.beginPath(); ctx.arc(pr.X(xs, y0), pr.Y(xs, y0, 0), r, 0, 2 * PI); ctx.fill(); }
-    else ball(pr.X(xs, y0), pr.Y(xs, y0, z), r, TOK.hl);
+    else ball(pr.X(xs, y0, z), pr.Y(xs, y0, z), r, TOK.hl);
   }
   function micReading() {
     if (!st.micOn || !st.mic) return null;
@@ -1309,7 +1442,8 @@ const I18N = {
       ctx.beginPath(); ctx.moveTo(bx1, by); ctx.lineTo(bx2, by); ctx.moveTo(bx1, by - 5); ctx.lineTo(bx1, by + 5); ctx.moveTo(bx2, by - 5); ctx.lineTo(bx2, by + 5); ctx.stroke();
       ctx.textAlign = 'left'; ctx.fillText((bar > W * 0.5 ? '> ' : '') + 'λ = ' + fmtLen(l), bx1, by - 8);
     } else {
-      const sy = Math.sign(pr.ca) || 1, sx = Math.sign(pr.sa) || 1, len = Math.min(l, 2 * R.Lx), x1 = R.cx - sx * R.Lx, x2 = x1 + sx * len, y = R.cy + sy * R.Ly * 1.06;
+      const len = Math.min(l, 2 * R.Lx), ya = R.cy - R.Ly * 1.06, yb = R.cy + R.Ly * 1.06, y = pr.Y(R.cx, ya, 0) > pr.Y(R.cx, yb, 0) ? ya : yb;
+      const x1 = pr.X(R.cx - R.Lx, y, 0) < pr.X(R.cx + R.Lx, y, 0) ? R.cx - R.Lx : R.cx + R.Lx, x2 = x1 + Math.sign(R.cx - x1) * len;
       ctx.beginPath(); ctx.moveTo(pr.X(x1, y), pr.Y(x1, y, 0)); ctx.lineTo(pr.X(x2, y), pr.Y(x2, y, 0)); ctx.stroke();
       ctx.textAlign = 'center'; const lx = pr.Y(x1, y, 0) > pr.Y(x2, y, 0) ? x1 : x2;
       ctx.fillText((l > 2 * R.Lx ? '> ' : '') + 'λ = ' + fmtLen(l), pr.X(lx, y), Math.max(pr.Y(x1, y, 0), pr.Y(x2, y, 0)) + 18);
@@ -1349,13 +1483,15 @@ const I18N = {
     let hExt = 0.06 * R.Lx; if (mode === 'surface') hExt = Hm * 1.45 + 0.08 * R.Lx; if (mode === 'block') hExt = R.Lx;
     const pr = makeProj(mode === 'block' ? { Lx: R.Lx, Ly: R.Lx, cx: R.cx, cy: R.cy } : R, hExt);
     const Rb = mode === 'block' ? { Lx: R.Lx, Ly: R.Lx, cx: R.cx, cy: R.cy } : R;
+    const split = !pr.top && mode !== 'molecules';                 // 3-D: the slice cuts the cabinets at the acoustic centre
+    if (split) drawSources(pr, Rb, V, cp, sp, 'below');
     if (mode === 'ripple') drawRipple(pr, R, V, cp, sp);
     else if (mode === 'spl') drawSPL(pr, R);
     else if (mode === 'surface') drawSurface(pr, R, V, cp, sp, Hm);
     else if (mode === 'block') drawBlock(pr, Rb, V, cp, sp);
     else drawMolecules(pr, R, V, cp, sp);
     drawWall(pr, Rb);
-    if (!(mode === 'molecules' && !pr.top)) drawSources(pr, Rb, V, cp, sp, false);
+    if (!(mode === 'molecules' && !pr.top)) drawSources(pr, Rb, V, cp, sp, split ? 'above' : 'all');
     if (st.hl && (mode === 'molecules' || mode === 'surface' || mode === 'block')) drawHighlight(pr, Rb, V, cp, sp, mode === 'surface', Hm);
     drawMic(pr);
     drawScale(pr, Rb);
@@ -1390,7 +1526,7 @@ const I18N = {
   function fit4() { st.width = Math.min(W_MAX, Math.max(W_MIN, 4 * lam())); invalidateView(); syncUI(); }
   function fitScene() {
     const s = sources(); let ext = 0;
-    for (const e of scene.elements) { const sz = (P.ELEMENTS[e.type] || P.ELEMENTS.point).size; ext = Math.max(ext, Math.abs(e.x - s.cx) + sz[0], Math.abs(e.y - s.cy) + sz[1]); }
+    for (const e of scene.elements) { const sz = P.sizeIn(e.type, scene.plane); ext = Math.max(ext, Math.abs(e.x - s.cx) + sz[0], Math.abs(e.y - s.cy) + sz[1]); }
     if (s.wall) ext = Math.max(ext, s.wall.kind === 'back' ? Math.abs(s.wall.at - s.cx) : Math.abs(s.wall.at - s.cy));
     st.width = Math.min(W_MAX, Math.max(W_MIN, ext > 0 ? Math.max(4 * lam(), 3.2 * ext, ext * 2 + 3 * lam()) : 4 * lam()));
     invalidateView(); syncUI();
@@ -1409,11 +1545,11 @@ const I18N = {
     const g = cvs.getContext('2d'), w = cvs.width = 180, h = cvs.height = 84, d = P.INSTALLS[id];
     const L = P.layout(id, d.def, d.elem, 343).elements;
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (const e of L) { const s = Math.max(0.3, P.ELEMENTS[e.type].size[1]); x0 = Math.min(x0, e.x - 0.8); x1 = Math.max(x1, e.x + 0.4); y0 = Math.min(y0, e.y - s); y1 = Math.max(y1, e.y + s); }
+    for (const e of L) { const s = Math.max(0.3, P.sizeIn(e.type, d.plane)[1]); x0 = Math.min(x0, e.x - 0.8); x1 = Math.max(x1, e.x + 0.4); y0 = Math.min(y0, e.y - s); y1 = Math.max(y1, e.y + s); }
     const sc = Math.min((w - 16) / (x1 - x0 + 1), (h - 12) / (y1 - y0)), ox = w / 2 - sc * (x0 + x1) / 2, oy = h / 2 - sc * (y0 + y1) / 2;
     g.clearRect(0, 0, w, h);
     for (const e of L) {
-      const sz = P.ELEMENTS[e.type].size, ca = Math.cos(e.aim), sa = Math.sin(e.aim), dd = Math.max(sz[0], 0.3, 7 / sc), ww = Math.max(sz[1], 0.3, 12 / sc) / 2;   // never smaller than a few pixels
+      const sz = P.sizeIn(e.type, d.plane), ca = Math.cos(e.aim), sa = Math.sin(e.aim), dd = Math.max(sz[0], 0.3, 7 / sc), ww = Math.max(sz[1], 0.1, 5 / sc) / 2;   // never smaller than a few pixels
       const C = (u, v) => [ox + sc * (e.x + ca * u - sa * v), oy + sc * (e.y + sa * u + ca * v)];
       g.beginPath(); [C(0, ww), C(-dd, ww), C(-dd, -ww), C(0, -ww)].forEach(([X, Y], i) => i ? g.lineTo(X, Y) : g.moveTo(X, Y)); g.closePath();
       g.fillStyle = e.pol < 0 ? TOK.neg : TOK.cab; g.fill();
@@ -1549,6 +1685,7 @@ const I18N = {
     $('span').value = st.span; $('o_span').textContent = st.span + ' dB'; $('n').value = st.n; $('o_n').textContent = st.n;
     document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === st.mode)));
     document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cam === st.cam)));
+    document.querySelector('#camSeg [data-cam=top] span').textContent = T(scene.plane === 'section' ? 'c_side' : 'c_top');
     document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === st.tab)));
     document.querySelectorAll('.panel').forEach(p => { p.hidden = p.dataset.panel !== st.tab; });
     $('play').textContent = paused ? '▶' : '❚❚'; $('play').title = T(paused ? 'play' : 'pause');
@@ -1614,14 +1751,14 @@ const I18N = {
     cv.addEventListener('pointermove', e => {
       if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (!drag.moved && Math.hypot(dx, dy) < 5) return;
-      drag.moved = true; cam.az = drag.az - dx * 0.01; cam.el = Math.min(PI / 2, Math.max(0.1, drag.el + dy * 0.01));
+      drag.moved = true; cam.az = drag.az - dx * 0.01; cam.el = Math.min(PI / 2, Math.max(scene.plane === 'section' ? 0 : 0.1, drag.el + dy * 0.01));
       st.cam = isTop() ? 'top' : 'free'; order = null; invalidateView(); syncCamButtons();
     });
     const up = e => {
       if (drag && !drag.moved && st.micOn && lastProj) {
         const r = cv.getBoundingClientRect(), Xs = e.clientX - r.left, Ys = e.clientY - r.top, pr = lastProj;
         // invert the floor projection (z = 0): solve the 2×2 affine map
-        const a = pr.sc * pr.ca, b = -pr.sc * pr.sa, c2 = pr.sc * pr.sa * pr.se, d = pr.sc * pr.ca * pr.se, X0 = pr.X(pr.R.cx, pr.R.cy), Y0 = pr.Y(pr.R.cx, pr.R.cy, 0);
+        const a = pr.ex[0], c2 = pr.ex[1], b = pr.ey[0], d = pr.ey[1], X0 = pr.X(pr.R.cx, pr.R.cy, 0), Y0 = pr.Y(pr.R.cx, pr.R.cy, 0);
         const det = a * d - b * c2, u = Xs - X0, v = Ys - Y0;
         st.mic = { x: pr.R.cx + (d * u - b * v) / det, y: pr.R.cy + (-c2 * u + a * v) / det }; syncUI(false);
       }
@@ -1647,7 +1784,7 @@ const I18N = {
     });
     window.addEventListener('resize', resize);
   }
-  function setCam(id) { st.cam = id; Object.assign(cam, CAMS[id] || CAMS.iso); order = null; invalidateView(); syncUI(false); }
+  function setCam(id) { st.cam = id; Object.assign(cam, camPreset(id)); order = null; invalidateView(); syncUI(false); }
   function syncCamButtons() { document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cam === st.cam))); cv.className = st.micOn ? 'mic' : (isTop() ? '' : 'orbit'); }
 
   // ---------------- Examples ----------------
@@ -1661,7 +1798,7 @@ const I18N = {
     ['endfire', () => { reset(); setInst('endfire'); st.mode = 'spl'; st.polar = true; st.width = 40; setCam0('top'); }],
     ['arc', () => { reset(); setInst('arc'); st.mode = 'spl'; st.polar = true; st.width = 50; setCam0('top'); }],
     ['arcdelay', () => { reset(); setInst('arcdelay'); st.mode = 'spl'; st.polar = true; st.width = 50; setCam0('top'); }],
-    ['steer', () => { reset(); setInst('steer'); st.params.spacing = 0.15; regen(); st.mode = 'ripple'; st.polar = true; st.width = 8; setCam0('top'); }],
+    ['steer', () => { reset(); setInst('steer'); st.mode = 'ripple'; st.polar = true; st.width = 8; setCam0('top'); }],
     ['jarray', () => { reset(); setInst('jarray'); st.f = 1000; regen(); st.mode = 'spl'; st.width = 40; setCam0('top'); }],
     ['wall', () => { reset(); setInst('single', true); st.elem = 'sub'; st.f = 63; st.bnd = 'back'; st.bdist = 1; st.brefl = 0.95; regen(); st.mode = 'ripple'; st.width = 22; setCam0('top'); }],
     ['delay', () => { reset(); setInst('delay'); st.mode = 'ripple'; st.width = 34; setCam0('top'); }],
@@ -1670,7 +1807,7 @@ const I18N = {
     ['dipole', () => { reset(); setInst('single', true); st.elem = 'dipole'; st.f = 200; regen(); st.mode = 'ripple'; st.width = 7; st.polar = true; setCam0('top'); }],
   ];
   function reset() { st.medium = 'air'; st.temp = 20; st.bnd = 'none'; st.custom = false; st.customEls = null; st.polar = false; st.micOn = false; st.mic = null; st.lock = true; }
-  function setCam0(id) { st.cam = id; Object.assign(cam, CAMS[id]); order = null; }
+  function setCam0(id) { st.cam = id; Object.assign(cam, camPreset(id)); order = null; }
   function buildExamples() {
     const m = $('exMenu'); m.innerHTML = '';
     for (const [id, fn] of EXAMPLES) {

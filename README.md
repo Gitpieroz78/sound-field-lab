@@ -47,7 +47,7 @@ double-click to go back. Every mode works with every camera.
 | End-fire | N subs in line along the axis | front ones delayed by spacing / c |
 | Left / right | two sources far apart | none: power alley and comb |
 | End-fire wings | two end-fire lines on the sides, splayed outwards | as end-fire |
-| Steered line | straight line | linear delay ramp: the beam turns by the angle |
+| Steered line | hanging column of 16 small drivers | linear delay ramp: the beam tilts up or down by the angle |
 | Line array (J) | flown array, vertical section, J curve | none |
 | Delay speaker | main and a delay downstream | delay = distance / c |
 
@@ -56,7 +56,12 @@ set them. The **processing table** lets you change gain, delay, polarity and mut
 the layout then becomes custom until you press "Back to the installation defaults".
 
 **Loudspeakers**: point, 18" sub, self-cardioid sub, 12" full range with 90° horn,
-line array element, column, dipole. Each card shows its directivity at 2 kHz.
+line array element, column, dipole, small 4" module (for steered columns). Each card shows its
+directivity at 2 kHz. The acoustic centre is the middle of the front face, where the main driver sits:
+the field starts there, and in the 3-D cameras the slice cuts the cabinet at that height.
+
+**Flown systems hang.** The line array (J) and the steered line are computed in a vertical section:
+the **Top** camera becomes **Side**, and at 45° the slice stands upright with the boxes hanging in it.
 
 **Boundary**: free field, a wall behind the system, a side wall (a floor in the vertical
 section), with distance and reflection. Modelled with a mirror-image source.
@@ -85,8 +90,9 @@ fresh water, sea water, steel, or any speed of sound. The panel gives λ, c, ρ,
 
 The physics was checked with automated tests against independent values: the ISO 9613
 absorption coefficients, the end-fire and gradient delays used in the Meyer Sound seminar,
-cardioid rejection, the steering angle of a delayed line and the +6 dB of a wall close
-behind a source. The page makes no network requests.
+cardioid rejection, the steering angle of a delayed line, the +6 dB of a wall close
+behind a source and the size of a hanging line array box in the vertical section.
+The page makes no network requests.
 
 ## Credits
 
