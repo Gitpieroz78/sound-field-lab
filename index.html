@@ -105,6 +105,13 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0
 .hint.gone { opacity: 0; }
 .toast { position: absolute; left: 50%; top: 100px; transform: translateX(-50%); padding: 8px 14px; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); }
 #fire { font-weight: 600; }
+.fbcard { max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
+.fbcard h2 { margin: 0; }
+.fbcard p { margin: 0; }
+#fbText { width: 100%; height: auto; min-height: 120px; padding: 8px; resize: vertical; font: inherit; }
+a.hbtn, a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
+a.btn.primary { color: var(--accent-ink); }
+@media (max-width: 700px) { #guideLink span, #fbBtn span { display: none; } }
 .ex-menu .linkbox { width: 100%; font: 12px ui-monospace, Menlo, monospace; margin-top: 6px; }
 
 /* ---------- sidebar ---------- */
@@ -225,8 +232,10 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
       <input type="file" id="svFile" accept=".json,application/json" hidden>
     </div>
   </div>
-  <select class="hsel" id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="it">IT</option></select>
+  <select class="hsel" id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="it">IT</option><option value="fr">FR</option></select>
   <button class="hbtn icon" id="theme" title="Light / dark" aria-label="Light / dark">◐</button>
+  <a class="hbtn" id="guideLink" href="guide.html" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 3.5C4 2.5 6 2.5 8 4c2-1.5 4-1.5 6-.5v9c-2-1-4-1-6 .5-2-1.5-4-1.5-6-.5z"/><path d="M8 4v9"/></svg><span data-i18n="guide">Guide</span></a>
+  <button class="hbtn" id="fbBtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg><span data-i18n="feedback">Write to us</span></button>
   <button class="hbtn icon" id="helpBtn" title="Keyboard" aria-label="Help">?</button>
 </header>
 <main>
@@ -416,6 +425,20 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     <h2 data-i18n="keys">Keyboard</h2>
     <table id="keysTable"></table>
     <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="helpClose">OK</button></div>
+  </div>
+</div>
+<div class="help" id="fb" hidden>
+  <div class="card fbcard">
+    <h2 data-i18n="fb_title">Write to the creator</h2>
+    <p class="note" data-i18n="fb_intro">Ideas, mistakes, things that do not work.</p>
+    <div class="chips" id="fbType"><button data-t="idea" data-i18n="fb_idea">Suggestion</button><button data-t="bug" data-i18n="fb_bug">Something is wrong</button></div>
+    <textarea id="fbText" class="field" rows="6"></textarea>
+    <p class="note" data-i18n="fb_note">You need a free GitHub account.</p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" id="fbCopy" data-i18n="fb_copy">Copy the text</button>
+      <a class="btn primary" id="fbSend" target="_blank" rel="noopener" href="#"><span data-i18n="fb_send">Continue on GitHub</span></a>
+      <button class="btn" id="fbClose">✕</button>
+    </div>
   </div>
 </div>
 <script>/* Sound Field Lab — physics. Pure functions, no DOM: loaded by the page and by the node tests.
@@ -737,6 +760,11 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
 /* Sound Field Lab — texts in English, Spanish and Italian. {x} are placeholders filled by the app. */
 const I18N = {
   en: {
+    guide: 'Guide', feedback: 'Write to us', fb_title: 'Write to the creator', fb_idea: 'Suggestion', fb_bug: 'Something is wrong',
+    fb_intro: 'Ideas, mistakes in the physics, things that do not work: every message helps. It opens on GitHub, the public page of the project, with a link to the scene you are looking at.',
+    fb_ph: 'What would you change, or what happened?', fb_send: 'Continue on GitHub', fb_copy: 'Copy the text', fb_copied: 'Text copied',
+    fb_note: 'You need a free GitHub account. Messages are public: do not write personal data.',
+    fb_scene: 'Scene', fb_browser: 'Browser', fb_lang: 'Language',
     subtitle: 'Every dot is one air molecule in a million', examples: 'Examples', readings: 'Readings',
     r_f: 'Frequency', r_T: 'Period', r_v: 'On screen', r_c: 'Speed of sound', r_l: 'Wavelength', r_z: 'Impedance ρc',
     r_a: 'Absorption', r_s: 'Screen width', r_sys: 'System', r_mic: 'Microphone',
@@ -846,6 +874,11 @@ const I18N = {
     k_m: 'Microphone on / off', k_drag: 'Drag: rotate (double-click: back to 45°)', k_help: 'This help',
   },
   es: {
+    guide: 'Guía', feedback: 'Escríbenos', fb_title: 'Escribir al creador', fb_idea: 'Sugerencia', fb_bug: 'Algo no funciona',
+    fb_intro: 'Ideas, errores en la física, cosas que no funcionan: cada mensaje ayuda. Se abre en GitHub, la página pública del proyecto, con un enlace a la escena que estás mirando.',
+    fb_ph: '¿Qué cambiarías, o qué ha pasado?', fb_send: 'Continuar en GitHub', fb_copy: 'Copiar el texto', fb_copied: 'Texto copiado',
+    fb_note: 'Necesitas una cuenta gratuita de GitHub. Los mensajes son públicos: no escribas datos personales.',
+    fb_scene: 'Escena', fb_browser: 'Navegador', fb_lang: 'Idioma',
     subtitle: 'Cada punto es una molécula de aire entre un millón', examples: 'Ejemplos', readings: 'Lecturas',
     r_f: 'Frecuencia', r_T: 'Período', r_v: 'En pantalla', r_c: 'Velocidad del sonido', r_l: 'Longitud de onda', r_z: 'Impedancia ρc',
     r_a: 'Absorción', r_s: 'Ancho de pantalla', r_sys: 'Sistema', r_mic: 'Micrófono',
@@ -949,6 +982,11 @@ const I18N = {
     k_m: 'Micrófono sí / no', k_drag: 'Arrastrar: girar (doble clic: volver a 45°)', k_help: 'Esta ayuda',
   },
   it: {
+    guide: 'Guida', feedback: 'Scrivici', fb_title: 'Scrivi al creatore', fb_idea: 'Suggerimento', fb_bug: 'Qualcosa non va',
+    fb_intro: 'Idee, errori nella fisica, cose che non funzionano: ogni messaggio aiuta. Si apre su GitHub, la pagina pubblica del progetto, con un link alla scena che stai guardando.',
+    fb_ph: 'Cosa cambieresti, o cosa è successo?', fb_send: 'Continua su GitHub', fb_copy: 'Copia il testo', fb_copied: 'Testo copiato',
+    fb_note: 'Serve un account GitHub gratuito. I messaggi sono pubblici: non scrivere dati personali.',
+    fb_scene: 'Scena', fb_browser: 'Browser', fb_lang: 'Lingua',
     subtitle: 'Ogni punto è una molecola d’aria su un milione', examples: 'Esempi', readings: 'Letture',
     r_f: 'Frequenza', r_T: 'Periodo', r_v: 'A schermo', r_c: 'Velocità del suono', r_l: 'Lunghezza d’onda', r_z: 'Impedenza ρc',
     r_a: 'Assorbimento', r_s: 'Larghezza schermo', r_sys: 'Sistema', r_mic: 'Microfono',
@@ -1050,6 +1088,114 @@ const I18N = {
     k_freq: 'Frequenza di un semitono (Shift: un’ottava)', k_space: 'Pausa / avvia', k_f: 'Adatta 4 lunghezze d’onda', k_g: 'Adatta la scena',
     k_t: 'Periodo sì / no', k_modes: 'Molecole · pressione · SPL · superficie · blocco d’aria', k_c: 'Inquadratura: alto · 45° · bassa',
     k_m: 'Microfono sì / no', k_drag: 'Trascina: ruota (doppio clic: torna a 45°)', k_help: 'Questo aiuto',
+  },
+  fr: {
+    guide: 'Guide', feedback: 'Écrivez-nous', fb_title: 'Écrire au créateur', fb_idea: 'Suggestion', fb_bug: 'Quelque chose ne va pas',
+    fb_intro: 'Idées, erreurs de physique, choses qui ne marchent pas : chaque message aide. Il s’ouvre sur GitHub, la page publique du projet, avec un lien vers la scène que vous regardez.',
+    fb_ph: 'Que changeriez-vous, ou que s’est-il passé ?', fb_send: 'Continuer sur GitHub', fb_copy: 'Copier le texte', fb_copied: 'Texte copié',
+    fb_note: 'Il faut un compte GitHub gratuit. Les messages sont publics : n’écrivez pas de données personnelles.',
+    fb_scene: 'Scène', fb_browser: 'Navigateur', fb_lang: 'Langue',
+    subtitle: 'Chaque point est une molécule d’air sur un million', examples: 'Exemples', readings: 'Mesures',
+    r_f: 'Fréquence', r_T: 'Période', r_v: 'À l’écran', r_c: 'Vitesse du son', r_l: 'Longueur d’onde', r_z: 'Impédance ρc',
+    r_a: 'Absorption', r_s: 'Largeur d’écran', r_sys: 'Système', r_mic: 'Micro',
+    m_mol: 'Molécules', m_rip: 'Pression', m_spl: 'Carte SPL', m_surf: 'Surface', m_block: 'Bloc d’air',
+    c_top: 'Dessus', c_side: 'Côté', c_low: 'Rasante', fit4: 'Ajuster 4 λ', fitscene: 'Ajuster la scène', fit4l: 'Ajuster 4 longueurs d’onde',
+    legend: 'Niveau (dB, par rapport au point le plus fort)', hint: 'Glisser pour tourner · double-clic pour revenir · ? pour les touches',
+    t_signal: 'Signal', t_speakers: 'Enceintes', t_medium: 'Milieu', t_view: 'Affichage',
+    freq: 'Fréquence', motion: 'Mouvement', amp: 'Amplitude', speed: 'Vitesse d’animation', tp: 'La période suit la fréquence',
+    scale: 'Échelle', lock: 'Garder l’échelle quand la fréquence change',
+    install: 'Installation', params: 'Disposition', element: 'Enceinte', proc: 'Traitement par élément',
+    procnote: 'Gain, délai et polarité de chaque enceinte, comme dans un processeur de système. Modifier une valeur rend la disposition personnalisée.',
+    procreset: 'Revenir aux valeurs de l’installation', boundary: 'Paroi', bdist: 'Distance au système', brefl: 'Réflexion',
+    medium: 'Milieu', temp: 'Température', hum: 'Humidité relative', customc: 'Vitesse du son',
+    absorb: 'Inclure l’absorption (air : ISO 9613-1)', medinfo: 'À cette fréquence',
+    show: 'Afficher', color: 'Couleur selon la pression (vert +, rouge −)', hl: 'Mettre en évidence une molécule', labels: 'Étiquettes de délai et de polarité',
+    polar: 'Diagramme polaire', mic: 'Micro : cliquez sur le sol pour le placer', span: 'Plage affichée', dots: 'Nombre',
+    credit: 'Inspiré des animations d’acoustique de Dan Russell (Penn State), des simulations PhET et Falstad et du séminaire Meyer Sound avec Magu. Construit à partir de la physique, sans contenu de tiers. Hors ligne, un seul fichier.',
+    keys: 'Clavier', cycle: 'cycle', capped: 'limité, trop rapide pour être montré', play: 'Lecture', pause: 'Pause',
+    speednote: 'Ralenti seulement : la fréquence change la géométrie (longueur d’onde), ceci change la vitesse à laquelle vous la regardez.',
+    speednote_tp: 'Période activée : plus de fréquence, cycle plus rapide. Un seul facteur de ralenti pour toutes les fréquences, fixé à 100 Hz.',
+    toofine: 'Trop de longueurs d’onde à l’écran : appuyez sur F (ajuster 4 λ) ou réduisez la largeur',
+    sys: '{n} × {e} · {len}', sys1: '1 × {e}', mic_ro: '{db} dB re 1 enceinte à 1 m · {ph}°', custom: 'personnalisé',
+    polar_t: 'Polaire à {r} · {f}', section: 'Coupe verticale (haut ↑)', plan: 'Vue en plan',
+    th_n: '#', th_g: 'dB', th_d: 'ms', th_p: 'Pol', th_m: 'On',
+    save: 'Enregistrer', sv_png: 'Image (PNG)', svd_png: 'Ce que vous voyez, avec une légende', sv_link: 'Copier le lien vers cette scène',
+    svd_link: 'Qui l’ouvre voit l’application exactement ainsi', sv_json: 'Enregistrer la scène (fichier)', svd_json: 'Pour préparer un cours et le rouvrir plus tard',
+    sv_open: 'Ouvrir une scène…', svd_open: 'Un fichier de scène enregistré auparavant', copied: 'Lien copié',
+    copyfail: 'Copie impossible ici : sélectionnez le lien dans le menu', loaded: 'Scène ouverte', loadfail: 'Ce n’est pas une scène Sound Field Lab',
+    fire: 'Impulsion', sig: 'Signal', sig_sine: 'Sinus continu', sig_pulse: 'Impulsion (clic)',
+    signote_sine: 'Un son stable à la fréquence ci-dessous : ce que montre un analyseur une fois le son établi.',
+    signote_pulse: 'Un clic bref centré sur la fréquence ci-dessous, envoyé par chaque enceinte avec son délai : regardez où les arrivées s’additionnent et où elles ne le font pas. La carte SPL reste celle du sinus continu ; la directivité est prise à la fréquence centrale.',
+    pulse_t: 't = {t} · ralenti {x}×', spl_sine: 'Carte SPL du sinus continu',
+    b_room: 'Salle', rwidth: 'Largeur de la salle', rheight: 'Hauteur de la salle', rdepth: 'Longueur de la salle', rorder: 'Réflexions jusqu’à l’ordre',
+    roomnote: 'Parois rigides comme images miroir de chaque enceinte (ordre 1 = un rebond). Les vraies salles absorbent aussi selon la fréquence et diffractent autour des objets : c’est une première idée, pas une prédiction de salle.',
+    i_tm: 'TM Array',
+    n_tm: 'Subs accrochés en colonne (technique Meyer Sound développée avec Thomas Mundorf) : un line array à la verticale, une source ponctuelle à l’horizontale. La colonne resserre le grave en hauteur ; la petite emprise le garde omnidirectionnel tout autour.',
+    ex_tm: 'TM Array', exd_tm: '10 subs accrochés en colonne, 63 Hz, vue de côté',
+    ex_room: 'Sub dans une salle', exd_room: 'Un sub dans une salle de 20 × 12 m, réflexions jusqu’à l’ordre 2, 50 Hz',
+    ex_pulse: 'Impulsion end-fire', exd_pulse: 'Un clic de 4 subs en end-fire : ensemble devant, étalés derrière',
+    k_p: 'Envoyer une impulsion (clic)',
+    i_single: 'Seule', i_line: 'Ligne droite', i_arc: 'Arc', i_arcdelay: 'Arc par délai', i_gradient: 'Gradient (cardioïde)',
+    i_invstack: 'Stack inversé', i_endfire: 'End-fire', i_lr: 'Gauche / droite', i_uni: 'Ailes end-fire', i_steer: 'Ligne orientée',
+    i_jarray: 'Line array (J)', i_delay: 'Tour de délai', i_custom: 'Personnalisée',
+    n_single: 'Une enceinte. Changez le type ci-dessous pour comparer une source ponctuelle, un sub, une enceinte large bande ou un dipôle.',
+    n_line: 'Enceintes côte à côte, toutes en même temps : faisceau étroit devant, lobes et creux hors axe quand l’espacement est grand par rapport à λ.',
+    n_arc: 'Enceintes sur un arc physique, le centre en avant et orientées vers l’extérieur : la couverture s’ouvre avec l’angle.',
+    n_arcdelay: 'Ligne droite avec les extrémités retardées comme si elles étaient sur l’arc : même couverture que l’arc physique, sans place en plus. Délai aux extrémités {d}.',
+    n_gradient: 'Sub arrière tourné vers l’avant, polarité inversée, retardé de profondeur / c = {d}. Annule derrière ; somme maximale devant à f = c / 4d = {f}.',
+    n_invstack: 'Sub arrière tourné vers l’arrière, inversé et retardé de {d} : le stack cardioïde classique.',
+    n_endfire: 'Subs en ligne sur l’axe, ceux de devant retardés de espacement / c ({d} chacun) : tout s’additionne devant, peu part en arrière.',
+    n_lr: 'Deux sources éloignées avec le même signal : le « power alley » au centre et le peigne de creux à travers la salle.',
+    n_uni: 'Deux lignes end-fire sur les ailes, ouvertes vers l’extérieur : grave directif sans cluster central.',
+    n_steer: 'Colonne suspendue de petits haut-parleurs avec une rampe linéaire de délais : le faisceau s’incline de l’angle (positif = vers le bas) sans bouger aucune enceinte, comme les colonnes orientées par DSP. Attention aux lobes de réseau quand l’espacement dépasse λ/2.',
+    n_jarray: 'Line array suspendu vu de côté : droit en haut pour la portée, courbé en bas pour les premiers rangs.',
+    n_delay: 'Système principal et une enceinte de délai {dist} plus loin, retardée de {d} pour qu’ils arrivent ensemble.',
+    n_custom: 'Vous avez modifié le traitement : la disposition garde vos valeurs.',
+    p_n: 'Éléments', p_spacing: 'Espacement', p_depth: 'Profondeur (avant-arrière)', p_rear: 'Gain arrière', p_angle: 'Angle',
+    p_width: 'Distance entre les côtés', p_dist: 'Distance', p_angle_steer: 'Angle d’orientation', p_angle_j: 'Ouverture totale',
+    p_angle_uni: 'Ouverture vers l’extérieur', p_n_ef: 'Éléments par ligne', p_depth_ef: 'Espacement sur l’axe',
+    e_point: 'Point', e_sub: 'Sub 18"', e_cardsub: 'Sub cardioïde', e_box: 'Large bande 12"', e_line: 'Élément de line array',
+    e_column: 'Colonne', e_dipole: 'Dipôle', e_mini: 'Petit 4"',
+    en_point: 'Source simple idéale : la même dans toutes les directions.',
+    en_sub: 'Enceinte avec un haut-parleur de 18 pouces : omnidirectionnelle quand la longueur d’onde est grande, plus vers l’avant en haut de sa bande.',
+    en_cardsub: 'Sub cardioïde en une seule enceinte (haut-parleurs arrière et traitement intégré) : environ 6 dB de moins à 90°, creux profond derrière.',
+    en_box: 'Boomer de 12 pouces et pavillon 90°, filtrage à 1,2 kHz : large dans le bas-médium, 90° constants au-dessus du filtrage.',
+    en_line: 'Élément de line array : 110° à l’horizontale ; dans la coupe verticale c’est une source linéaire de 35 cm.',
+    en_column: 'Colonne de petits haut-parleurs, 1,2 m de haut : large à l’horizontale, étroite à la verticale.',
+    en_dipole: 'Baffle ouvert : avant et arrière en polarité opposée, creux sur les côtés.',
+    en_mini: 'Petit haut-parleur de 4 pouces en enceinte, la brique des colonnes orientées par DSP : presque omnidirectionnel jusqu’à quelques kHz.',
+    ka: 'ka = {ka}',
+    b_none: 'Champ libre', b_back: 'Mur derrière', b_side: 'Mur latéral', b_floor: 'Sol',
+    md_air: 'Air', md_helium: 'Hélium', md_hydrogen: 'Hydrogène', md_co2: 'CO₂ / fumée de glace carbonique', md_water: 'Eau', md_seawater: 'Eau de mer',
+    md_steel: 'Acier', md_custom: 'Personnalisé',
+    mn_air: 'c = 331,4 + 0,607·T (Steve Bush, Audio Physics). Absorption selon ISO 9613-1 avec température et humidité.',
+    mn_helium: 'Gaz léger : le son va environ trois fois plus vite, les longueurs d’onde sont trois fois plus longues.',
+    mn_hydrogen: 'Le gaz le plus léger : presque quatre fois plus rapide que l’air.',
+    mn_co2: 'Gaz lourd, plus lent que l’air : la fumée froide de la glace carbonique courbe et ralentit le son qui la traverse.',
+    mn_water: 'Environ 4,3 fois plus rapide que l’air et 3600 fois plus d’impédance : presque aucun son ne passe de l’air à l’eau.',
+    mn_seawater: 'Salinité 35 ‰ : un peu plus rapide que l’eau douce. Absorption selon Thorp.',
+    mn_steel: 'Ondes longitudinales dans l’acier : environ 17 fois plus rapide que l’air.',
+    mn_custom: 'Choisissez n’importe quelle vitesse du son.',
+    medinfo_t: 'λ = <b>{l}</b> · c = <b>{c}</b> · ρ = <b>{rho}</b> · Z = ρc = <b>{z}</b><br>Absorption : <b>{a}</b> · sur 100 m : <b>{a100}</b>',
+    ex_simple: 'Source simple', exd_simple: 'L’original : une molécule sur un million autour d’une source ponctuelle',
+    ex_beam: 'Directivité d’une enceinte', exd_beam: 'Enceinte large bande à 2 kHz : couverture du pavillon 90°',
+    ex_comb: 'Deux enceintes : filtre en peigne', exd_comb: 'Deux enceintes large bande à 3 m, 1 kHz',
+    ex_alley: 'Power alley', exd_alley: 'Subs gauche/droite à 12 m, 63 Hz',
+    ex_gradient: 'Gradient cardioïde', exd_gradient: '1,35 m, 3,93 ms, arrière inversé à 63 Hz',
+    ex_invstack: 'Stack inversé', exd_invstack: 'Enceinte arrière retournée à 63 Hz',
+    ex_endfire: 'End-fire 4 subs', exd_endfire: '1,07 m, 0 / 3,1 / 6,2 / 9,3 ms à 80 Hz',
+    ex_arc: 'Arc physique', exd_arc: '8 subs sur un arc de 60° à 80 Hz',
+    ex_arcdelay: 'Arc par délai', exd_arcdelay: 'Les mêmes 8 subs en ligne droite, retardés comme l’arc',
+    ex_steer: 'Ligne orientée', exd_steer: '16 petits haut-parleurs suspendus, faisceau incliné de 15° vers le bas par délai, 1 kHz',
+    ex_jarray: 'Line array J', exd_jarray: '12 éléments, 30° d’ouverture, coupe verticale, 1 kHz',
+    ex_wall: 'Sub près d’un mur', exd_wall: 'Un sub à 1 m d’un mur derrière, 63 Hz',
+    ex_delay: 'Tour de délai', exd_delay: 'Principal et délai à 20 m, 250 Hz',
+    ex_helium: 'Hélium contre air', exd_helium: 'La même source à 1 kHz dans l’hélium',
+    ex_water: 'Sous l’eau', exd_water: '1 kHz dans l’eau : longueur d’onde plus grande',
+    ex_dipole: 'Dipôle', exd_dipole: 'Baffle ouvert à 200 Hz : creux sur les côtés',
+    k_freq: 'Fréquence d’un demi-ton (Shift : une octave)', k_space: 'Pause / lecture', k_f: 'Ajuster 4 longueurs d’onde', k_g: 'Ajuster la scène',
+    k_t: 'Période oui / non', k_modes: 'Molécules · pression · SPL · surface · bloc d’air', k_c: 'Caméra : dessus · 45° · rasante',
+    k_m: 'Micro oui / non', k_drag: 'Glisser : tourner (double-clic : retour à 45°)', k_help: 'Cette aide',
   },
 };
 
@@ -1921,6 +2067,7 @@ const I18N = {
     document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === st.mode)));
     document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cam === st.cam)));
     document.querySelector('#camSeg [data-cam=top] span').textContent = T(scene.plane === 'section' ? 'c_side' : 'c_top');
+    $('guideLink').href = 'guide.html#l=' + st.lang;
     document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === st.tab)));
     document.querySelectorAll('.panel').forEach(p => { p.hidden = p.dataset.panel !== st.tab; });
     $('play').textContent = paused ? '▶' : '❚❚'; $('play').title = T(paused ? 'play' : 'pause');
@@ -1959,7 +2106,7 @@ const I18N = {
     $('rd').oninput = () => { st.rd = toLog(+$('rd').value, 2, 200); invalidate(); syncUI(false); };
     document.querySelectorAll('#sigChips button').forEach(b => b.onclick = () => { if (b.dataset.sig === 'pulse') fire(); else { st.sig = 'sine'; syncUI(false); } });
     $('fire').onclick = fire;
-    wireSave();
+    wireSave(); wireFeedback();
     $('bd').oninput = () => { st.bdist = toLog(+$('bd').value, 0.02, 30); invalidate(); syncUI(false); };
     $('br').oninput = () => { st.brefl = +$('br').value / 100; invalidate(); syncUI(false); };
     $('t').oninput = () => { st.temp = +$('t').value; if (!st.custom) regen(); else invalidate(); syncUI(false); };
@@ -2009,6 +2156,7 @@ const I18N = {
     cv.addEventListener('dblclick', () => setCam(st.cam === 'top' ? 'top' : 'iso'));
     window.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT' && (e.target.type === 'number' || e.target.type === 'text')) return;
+      if (e.target.tagName === 'TEXTAREA') return;
       if (e.target.tagName === 'SELECT') return;
       const k = e.key, semi = Math.pow(2, 1 / 12);
       if (k === 'ArrowRight' || k === 'ArrowUp') { setF(st.f * (e.shiftKey ? 2 : semi)); e.preventDefault(); }
@@ -2022,7 +2170,7 @@ const I18N = {
       else if (k === 'c' || k === 'C') { const cs = ['top', 'iso', 'low']; setCam(cs[(cs.indexOf(st.cam) + 1) % 3]); }
       else if (k >= '1' && k <= '5') { st.mode = ['molecules', 'ripple', 'spl', 'surface', 'block'][+k - 1]; syncUI(false); }
       else if (k === '?') $('help').hidden = !$('help').hidden;
-      else if (k === 'Escape') { $('help').hidden = true; $('exMenu').hidden = true; $('saveMenu').hidden = true; }
+      else if (k === 'Escape') { $('help').hidden = true; $('fb').hidden = true; $('exMenu').hidden = true; $('saveMenu').hidden = true; }
     });
     window.addEventListener('resize', resize);
   }
@@ -2120,6 +2268,27 @@ const I18N = {
     g.fillText('gitpieroz78.github.io/sound-field-lab', out.width - pad, cv.height + bar * dpr / 2);
     download(fileName('png'), out.toDataURL('image/png'));
   }
+  // ---------------- Write to the creator: a prefilled issue on the public repository (no e-mail on the page) ----------------
+  const REPO = 'https://github.com/Gitpieroz78/sound-field-lab', SITE = 'https://gitpieroz78.github.io/sound-field-lab/';
+  let fbType = 'idea';
+  function fbBody() {
+    const link = (location.protocol === 'file:' ? SITE : location.href.split('#')[0]) + '#s=' + b64u(JSON.stringify(sceneData()));
+    return $('fbText').value.trim() + '\n\n---\n' + tr('fb_scene') + ': ' + link + '\n' + tr('fb_browser') + ': ' + navigator.userAgent + '\n' + tr('fb_lang') + ': ' + st.lang;
+  }
+  function fbUpdate() {
+    document.querySelectorAll('#fbType button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === fbType)));
+    const first = $('fbText').value.trim().split('\n')[0].slice(0, 70) || tr(fbType === 'bug' ? 'fb_bug' : 'fb_idea');
+    $('fbSend').href = REPO + '/issues/new?title=' + encodeURIComponent((fbType === 'bug' ? '[Bug] ' : '[Idea] ') + first) + '&body=' + encodeURIComponent(fbBody());
+  }
+  function wireFeedback() {
+    $('fbBtn').onclick = () => { $('fb').hidden = false; $('fbText').placeholder = tr('fb_ph'); fbUpdate(); $('fbText').focus(); };
+    $('fbClose').onclick = () => { $('fb').hidden = true; };
+    $('fb').onclick = e => { if (e.target === $('fb')) $('fb').hidden = true; };
+    document.querySelectorAll('#fbType button').forEach(b => b.onclick = () => { fbType = b.dataset.t; fbUpdate(); });
+    $('fbText').oninput = fbUpdate;
+    $('fbSend').addEventListener('click', () => setTimeout(() => { $('fb').hidden = true; }, 300));
+    $('fbCopy').onclick = () => { try { navigator.clipboard.writeText(fbBody()).then(() => toast(tr('fb_copied')), () => { $('fbText').select(); }); } catch (er) { $('fbText').select(); } };
+  }
   function wireSave() {
     const menu = $('saveMenu');
     $('saveBtn').onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; $('saveBtn').setAttribute('aria-expanded', String(!menu.hidden)); };
@@ -2148,10 +2317,13 @@ const I18N = {
   if (!P.ELEMENTS[st.elem]) st.elem = 'point';
   if (!P.MEDIA[st.medium]) st.medium = 'air';
   if (st.cam === 'free') st.cam = 'iso';
-  if (location.hash.startsWith('#s=')) { try { loadScene(JSON.parse(unb64u(location.hash.slice(3)))); } catch (er) { /* broken link: keep the saved state */ } }
+  const hp = new URLSearchParams(location.hash.slice(1));          // #s=<scene>, #x=<example> (from the guide), l=<language>
+  if (hp.get('s')) { try { loadScene(JSON.parse(unb64u(hp.get('s')))); } catch (er) { /* broken link: keep the saved state */ } }
+  if (I18N[hp.get('l')]) st.lang = hp.get('l');
   if (st.sig === 'pulse') pulseT = -P.pulseHalf(st.f);
   Object.assign(cam, CAMS[st.cam] || CAMS.top);
   readTokens(); resize(); buildParticles(); regen(); wire(); buildExamples(); buildKeys(); syncUI(); updateLegend();
+  { const ex = EXAMPLES.find(e => e[0] === hp.get('x')); if (ex) { ex[1](); invalidate(); buildCards(); syncUI(); } }   // opened from the guide
   if (matchMedia('(max-width: 900px)').matches) $('ro').classList.add('collapsed');
   const hideHint = () => $('hint').classList.add('gone'); setTimeout(hideHint, 7000); cv.addEventListener('pointerdown', hideHint, { once: true });
   requestAnimationFrame(frame);

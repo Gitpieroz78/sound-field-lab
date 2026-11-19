@@ -5,11 +5,11 @@ of the air, the pressure field, the level map, the directivity. It grew out of t
 "Sound field of a simple source" animation made for Magu after the Meyer Sound
 "System Design and Optimization" seminar (20-22 October 2026), and keeps everything he liked
 in it: one molecule in a million, the highlighted molecule, colour by pressure,
-"Fit 4 wavelengths", ÷2 / ×2, the time period switch, English, Spanish and Italian.
+"Fit 4 wavelengths", ÷2 / ×2, the time period switch, English, Spanish and Italian, and now French too.
 
-**Open it: https://gitpieroz78.github.io/sound-field-lab/**
+**Open it: https://gitpieroz78.github.io/sound-field-lab/** · **Guide: https://gitpieroz78.github.io/sound-field-lab/guide.html**
 
-Or download `index.html` and open it in any browser: it is a single file and works offline.
+Or download `index.html` (and `guide.html`) and open them in any browser: single files that work offline.
 No installation, no account.
 
 ## The screen
@@ -21,6 +21,11 @@ No installation, no account.
 - **Side panel**: four tabs. Signal, Speakers, Medium, View.
 - **Examples** (header): nineteen ready-made scenes, from the simple source to the TM Array, a sub in a room and an end-fire pulse.
 - **Save** (header): an image, a scene file, or a link to the scene (see below).
+- **Guide** (header): opens `guide.html`, an illustrated guide in four languages with ten experiments;
+  each experiment opens the lab already set up (`#x=<example>`).
+- **Write to us** (header): a short form that opens a prefilled issue on the project's GitHub page,
+  with a link to the current scene, the browser and the language. It needs a free GitHub account; no
+  e-mail address is published.
 
 | Mode | What it shows |
 |---|---|
@@ -119,7 +124,12 @@ absorption coefficients, the end-fire and gradient delays used in the Meyer Soun
 cardioid rejection, the steering angle of a delayed line, the +6 dB of a wall close
 behind a source, the size of a hanging line array box in the vertical section, the TM Array
 pattern, the number of mirror images in a room and the arrival times of the end-fire click.
-The page makes no network requests.
+A second test checks that the four languages have every text. The pages make no network requests.
+
+## Ideas and bugs
+
+Use **Write to us** in the lab, or open an issue on this repository: suggestions, mistakes in the
+physics and bugs are all welcome.
 
 ## Credits
 

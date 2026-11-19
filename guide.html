@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Field Lab — Guide</title>
+<style>
+/* Sound Field Lab guide — same tokens as the app; light by default, dark by system or toggle. Offline, no external assets. */
+:root {
+  --bg: #f3f2ee; --panel: #ffffff; --ink: #1b1d1f; --muted: #62676d; --line: #dedbd3; --accent: #1f5fbf; --accent-ink: #fff;
+  --chip: #ecebe6; --pos: #1a9c4b; --neg: #d6322a; --hero: #0e1012; --hero-ink: #eef0f2; --hero-muted: #a6adb4;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1012; --panel: #16191c; --ink: #e8eaec; --muted: #9aa1a8; --line: #2a2f35; --accent: #7fb0ff; --accent-ink: #0e1012;
+  --chip: #22272c; --pos: #3ddc84; --neg: #ff5a52; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1012; --panel: #16191c; --ink: #e8eaec; --muted: #9aa1a8; --line: #2a2f35; --accent: #7fb0ff; --accent-ink: #0e1012;
+  --chip: #22272c; --pos: #3ddc84; --neg: #ff5a52; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+a { color: var(--accent); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+
+/* hero */
+.hero { position: relative; background: var(--hero); color: var(--hero-ink); overflow: hidden; }
+.hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .9; }
+.hero .shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,16,18,.92) 0%, rgba(14,16,18,.65) 45%, rgba(14,16,18,.05) 100%); }
+.hero .wrap { position: relative; padding-block: 28px 64px; }
+.top { display: flex; align-items: center; gap: 12px; margin-bottom: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -.01em; }
+.brand svg { color: #7fb0ff; }
+.spacer { flex: 1; }
+.langs { display: flex; gap: 2px; background: rgba(255,255,255,.08); border-radius: 999px; padding: 3px; }
+.langs button { border: 0; background: transparent; color: var(--hero-muted); font: 600 12.5px system-ui, sans-serif; padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.langs button[aria-pressed="true"] { background: #7fb0ff; color: #0e1012; }
+.kicker { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #7fb0ff; font-weight: 650; }
+h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(36px, 6vw, 64px); line-height: 1.04; letter-spacing: -.02em; margin: 14px 0 18px; max-width: 13em; text-wrap: balance; }
+.lead { font-size: clamp(17px, 2vw, 20px); color: var(--hero-muted); max-width: 34em; margin: 0 0 28px; }
+.cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 12px 20px; font-weight: 650; text-decoration: none; border: 1px solid transparent; }
+.btn.main { background: #7fb0ff; color: #0e1012; }
+.btn.ghost { border-color: rgba(255,255,255,.25); color: var(--hero-ink); }
+.btn.solid { background: var(--accent); color: var(--accent-ink); }
+
+/* sections */
+section { padding-block: 64px 8px; }
+h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 3.6vw, 40px); line-height: 1.1; letter-spacing: -.015em; margin: 0 0 10px; text-wrap: balance; }
+.sub { color: var(--muted); max-width: 40em; margin: 0 0 28px; font-size: 17px; }
+.num { counter-reset: s; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.num li { list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 20px 22px; position: relative; }
+.num li::before { counter-increment: s; content: counter(s); font: 600 34px/1 var(--serif); color: var(--accent); display: block; margin-bottom: 10px; }
+.num { padding: 0; margin: 0; }
+.views { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.view { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.view svg { width: 100%; height: 92px; display: block; margin-bottom: 10px; border-radius: 10px; background: var(--hero); }
+.view b { display: block; margin-bottom: 4px; }
+.view p { margin: 0; color: var(--muted); font-size: 14.5px; }
+.exps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.exp { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; display: flex; flex-direction: column; gap: 8px; }
+.exp .tag { align-self: flex-start; font-size: 12.5px; font-weight: 650; color: var(--muted); background: var(--chip); border-radius: 999px; padding: 3px 10px; }
+.exp h3 { font-family: var(--serif); font-weight: 600; font-size: 22px; line-height: 1.2; margin: 2px 0 0; }
+.exp p { margin: 0; color: var(--muted); }
+.exp a { margin-top: auto; align-self: flex-start; font-weight: 650; text-decoration: none; padding-top: 6px; }
+.exp a:hover { text-decoration: underline; }
+.tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.tool { border-top: 3px solid var(--accent); background: var(--panel); border-radius: 0 0 14px 14px; padding: 14px 16px; }
+.tool b { display: block; margin-bottom: 4px; }
+.tool span { color: var(--muted); font-size: 14.5px; }
+.keys { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; color: var(--muted); font-size: 14.5px; }
+kbd { font: 600 12.5px ui-monospace, Menlo, monospace; color: var(--ink); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; background: var(--panel); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.note { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px; }
+.note h2 { font-size: 26px; }
+.note p { color: var(--muted); margin: 0; }
+.write { margin-top: 16px; background: var(--hero); color: var(--hero-ink); border-radius: 22px; padding: 30px 32px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.write h2 { color: var(--hero-ink); margin: 0 0 6px; }
+.write p { color: var(--hero-muted); margin: 0; max-width: 36em; }
+.write .btn { margin-left: auto; }
+footer { color: var(--muted); font-size: 13.5px; padding-block: 40px 48px; }
+@media (max-width: 860px) {
+  .views { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .num, .exps, .split, .tools { grid-template-columns: minmax(0, 1fr); }
+  .top { margin-bottom: 36px; }
+  .hero .shade { background: linear-gradient(180deg, rgba(14,16,18,.78) 0%, rgba(14,16,18,.6) 100%); }
+  .write .btn { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media print {
+  .hero canvas, .hero .shade, .langs, .cta { display: none; }
+  .hero { background: none; color: #000; }
+  .hero .wrap { padding-block: 0 10px; } .top { margin-bottom: 10px; }
+  .lead, .kicker { color: #333; }
+  section { padding-block: 18px 0; break-inside: avoid; }
+  .exp, .view, .note, .tool, .num li { break-inside: avoid; border-color: #bbb; }
+  .exp a { display: none; }
+  .write { background: none; color: #000; border: 1px solid #bbb; } .write p, .write h2 { color: #000; } .write .btn { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <canvas id="air" aria-hidden="true"></canvas>
+  <div class="shade"></div>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="13" r="2.4" fill="currentColor" stroke="none"/><path d="M10 8.5a6.5 6.5 0 0 1 0 9"/><path d="M14 5.5a10.5 10.5 0 0 1 0 15"/><path d="M18 2.8a14.5 14.5 0 0 1 0 20.4"/></svg>
+        Sound Field Lab
+      </div>
+      <span class="spacer"></span>
+      <div class="langs" role="group" aria-label="Language">
+        <button data-l="it">IT</button><button data-l="en">EN</button><button data-l="es">ES</button><button data-l="fr">FR</button>
+      </div>
+    </div>
+    <div class="kicker" data-k="kicker"></div>
+    <h1 data-k="h1"></h1>
+    <p class="lead" data-k="lead"></p>
+    <div class="cta">
+      <a class="btn main app" data-k="open" href="./"></a>
+      <a class="btn ghost" href="#experiments" data-k="try"></a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2 data-k="s1"></h2>
+    <p class="sub" data-k="s1sub"></p>
+    <ol class="num"><li data-k="step1"></li><li data-k="step2"></li><li data-k="step3"></li></ol>
+  </section>
+
+  <section>
+    <h2 data-k="s2"></h2>
+    <p class="sub" data-k="s2sub"></p>
+    <div class="views" id="views"></div>
+  </section>
+
+  <section id="experiments">
+    <h2 data-k="s3"></h2>
+    <p class="sub" data-k="s3sub"></p>
+    <div class="exps" id="exps"></div>
+  </section>
+
+  <section>
+    <h2 data-k="s4"></h2>
+    <p class="sub" data-k="s4sub"></p>
+    <div class="tools" id="tools"></div>
+    <div class="keys" id="keys"></div>
+  </section>
+
+  <section>
+    <div class="split">
+      <div class="note"><h2 data-k="s5"></h2><p data-k="s5txt"></p></div>
+      <div class="note"><h2 data-k="s6"></h2><p data-k="s6txt"></p></div>
+    </div>
+    <div class="write">
+      <div><h2 data-k="s7"></h2><p data-k="s7txt"></p></div>
+      <a class="btn main" id="writeBtn" target="_blank" rel="noopener" href="https://github.com/Gitpieroz78/sound-field-lab/issues/new" data-k="s7btn"></a>
+    </div>
+  </section>
+</main>
+<footer class="wrap" data-k="foot"></footer>
+
+<script>
+(() => {
+  'use strict';
+  // ---------------- Texts (IT, EN, ES, FR). Interface names match the app exactly in IT, EN and ES. ----------------
+  const T = {
+    en: {
+      kicker: 'Guide', h1: 'The air never travels. The wave does.',
+      lead: 'Every dot is one air molecule in a million. Press play and watch them swing in place while the sound runs away from the loudspeaker. Then build end-fire subs, line arrays and rooms, and see why they work.',
+      open: 'Open the lab', try: 'Try an experiment',
+      s1: 'Your first minute', s1sub: 'Three moves, and the rest of the lab makes sense.',
+      step1: 'Open <b>Examples</b> and choose <b>Simple source</b>. Find the red molecule: it never leaves its place.',
+      step2: 'Press <b>×2</b> a few times. The rings get closer: shorter wavelength, same speed of sound.',
+      step3: 'Switch the camera to <b>45°</b> and drag. The same air, now in three dimensions.',
+      s2: 'Five ways to look at the same air', s2sub: 'Same physics, five pictures. Each one makes a different thing obvious.',
+      v_mol: 'Molecules', v_mol_t: 'One dot, one molecule. Green where the air is pressed together, red where it is pulled apart.',
+      v_rip: 'Pressure', v_rip_t: 'The pressure as colour, like a ripple tank: the shape of the wavefronts at a glance.',
+      v_spl: 'SPL map', v_spl_t: 'The level in 3 dB bands, as in a prediction software: where it is loud, where it is not.',
+      v_surf: 'Surface', v_surf_t: 'The pressure as a moving sheet: compressions rise, rarefactions sink.',
+      v_block: 'Air block', v_block_t: 'A cube of air cut open: the wavefronts on its faces, all around the source.',
+      s3: 'Experiments', s3sub: 'Each one opens the lab already set up. Read the question, guess the answer, then look.',
+      go: 'Open in the lab →',
+      s4: 'Your toolbox', s4sub: 'Four tabs on the right of the lab. Everything changes live.',
+      t_signal: 'Signal', t_signal_t: 'sine or pulse, frequency, animation speed, screen width',
+      t_speakers: 'Speakers', t_speakers_t: '13 installations, 8 loudspeakers, gain, delay and polarity per box, walls and room',
+      t_medium: 'Medium', t_medium_t: 'air with temperature and humidity, helium, CO₂, water, steel…',
+      t_view: 'View', t_view_t: 'colours, labels, polar plot, a microphone you place with a click',
+      k_freq: 'frequency', k_pulse: 'pulse', k_pause: 'pause', k_fit: 'fit 4 λ', k_views: 'views', k_cam: 'camera', k_mic: 'microphone', k_help: 'all keys',
+      s5: 'Save, share, teach', s5txt: 'The Save menu makes an image with a caption, a link that reopens exactly what you see, or a scene file. A lesson can be a list of links.',
+      s6: 'What it is not', s6txt: 'A tool to understand, not to design: simple loudspeaker models, one frequency at a time, rigid walls, no diffraction. To design a system, use MAPP 3D or the manufacturer’s software.',
+      s7: 'Ideas? Something wrong?', s7txt: 'Write to the creator: suggestions, mistakes in the physics, bugs. Messages go to the project’s public page on GitHub (a free account is needed). In the lab, the Write to us button also attaches the scene you are looking at.',
+      s7btn: 'Write to the creator',
+      foot: 'Sound Field Lab — inspired by Dan Russell’s acoustics animations (Penn State), the PhET and Falstad simulations and the Meyer Sound seminar with Magu. Built from the physics, no third-party assets, works offline. Free to copy, share and modify.',
+      ex: {
+        simple: ['1 kHz · point source', 'What actually moves?', 'Follow the red molecule: back and forth, never away. The wave travels; the air stays.'],
+        alley: ['2 subs · 63 Hz', 'Why is the middle of the room so loud?', 'Same signal from two subs: where the paths are equal they add up, elsewhere a comb of holes.'],
+        gradient: ['Cardioid · 63 Hz', 'How can a sub be quiet behind?', 'The rear sub is inverted and delayed: behind the pair, the two cancel. Look at the polar plot.'],
+        pulse: ['End-fire · pulse', 'Can four clicks become one?', 'Each sub fires at its own delay. In front the clicks arrive together, behind they spread out.'],
+        arcdelay: ['8 subs · 80 Hz', 'Can a straight line behave like an arc?', 'Only delays, no truck space. Then open Physical arc in Examples and compare.'],
+        jarray: ['12 boxes · 1 kHz', 'Why is a line array curved at the bottom?', 'Straight on top for the back of the room, curved below for the front rows. Seen from the side.'],
+        tm: ['TM Array · 63 Hz', 'Why hang the subs in a column?', 'From the side: the column keeps the low end away from the roof and the floor, and stays round in plan.'],
+        room: ['Room · 50 Hz', 'What does a room do to one sub?', 'Rigid walls send the sound back: the map fills with peaks and holes. Press Pulse to see the bounces.'],
+        helium: ['Helium · 1 kHz', 'Why does helium change the voice?', 'Same 1 kHz, rings three times farther apart: sound runs almost three times faster in helium.'],
+        dipole: ['Dipole · 200 Hz', 'Where does an open baffle go silent?', 'Front and back push in opposite directions: on the sides they cancel.'],
+      },
+    },
+    it: {
+      kicker: 'Guida', h1: 'L’aria non viaggia. L’onda sì.',
+      lead: 'Ogni punto è una molecola d’aria su un milione. Premi play e guardale oscillare sul posto mentre il suono corre via dal diffusore. Poi costruisci sub end-fire, line array e sale, e scopri perché funzionano.',
+      open: 'Apri il laboratorio', try: 'Prova un esperimento',
+      s1: 'Il tuo primo minuto', s1sub: 'Tre mosse, e il resto del laboratorio ha senso.',
+      step1: 'Apri <b>Esempi</b> e scegli <b>Sorgente semplice</b>. Trova la molecola rossa: non lascia mai il suo posto.',
+      step2: 'Premi <b>×2</b> qualche volta. Gli anelli si stringono: lunghezza d’onda più corta, stessa velocità del suono.',
+      step3: 'Passa l’inquadratura a <b>45°</b> e trascina. La stessa aria, ora in tre dimensioni.',
+      s2: 'Cinque modi di guardare la stessa aria', s2sub: 'Stessa fisica, cinque immagini. Ognuna rende evidente una cosa diversa.',
+      v_mol: 'Molecole', v_mol_t: 'Un punto, una molecola. Verde dove l’aria è compressa, rosso dove è rarefatta.',
+      v_rip: 'Pressione', v_rip_t: 'La pressione come colore, come in una vasca ondosa: la forma dei fronti d’onda a colpo d’occhio.',
+      v_spl: 'Mappa SPL', v_spl_t: 'Il livello a fasce di 3 dB, come in un software di previsione: dove suona forte e dove no.',
+      v_surf: 'Superficie', v_surf_t: 'La pressione come un telo che si muove: le compressioni salgono, le rarefazioni scendono.',
+      v_block: 'Blocco d’aria', v_block_t: 'Un cubo d’aria sezionato: i fronti d’onda sulle sue facce, tutto intorno alla sorgente.',
+      s3: 'Esperimenti', s3sub: 'Ognuno apre il laboratorio già impostato. Leggi la domanda, prova a indovinare, poi guarda.',
+      go: 'Apri nel laboratorio →',
+      s4: 'La cassetta degli attrezzi', s4sub: 'Quattro schede a destra del laboratorio. Tutto cambia dal vivo.',
+      t_signal: 'Segnale', t_signal_t: 'seno o impulso, frequenza, velocità dell’animazione, larghezza dello schermo',
+      t_speakers: 'Diffusori', t_speakers_t: '13 installazioni, 8 diffusori, guadagno, ritardo e polarità per cassa, muri e sala',
+      t_medium: 'Mezzo', t_medium_t: 'aria con temperatura e umidità, elio, CO₂, acqua, acciaio…',
+      t_view: 'Vista', t_view_t: 'colori, etichette, diagramma polare, un microfono che si posa con un clic',
+      k_freq: 'frequenza', k_pulse: 'impulso', k_pause: 'pausa', k_fit: 'adatta 4 λ', k_views: 'viste', k_cam: 'inquadratura', k_mic: 'microfono', k_help: 'tutti i tasti',
+      s5: 'Salva, condividi, insegna', s5txt: 'Il menu Salva crea un’immagine con didascalia, un link che riapre esattamente quello che vedi, o un file della scena. Una lezione può essere una lista di link.',
+      s6: 'Cosa non è', s6txt: 'Uno strumento per capire, non per progettare: modelli semplici dei diffusori, una frequenza alla volta, pareti rigide, niente diffrazione. Per progettare un impianto si usano MAPP 3D o i software dei costruttori.',
+      s7: 'Idee? Qualcosa non va?', s7txt: 'Scrivi al creatore: suggerimenti, errori nella fisica, bug. I messaggi arrivano sulla pagina pubblica del progetto su GitHub (serve un account gratuito). Nel laboratorio il pulsante Scrivici allega anche la scena che stai guardando.',
+      s7btn: 'Scrivi al creatore',
+      foot: 'Sound Field Lab — ispirato alle animazioni di acustica di Dan Russell (Penn State), alle simulazioni PhET e Falstad e al seminario Meyer Sound con Magu. Costruito dalla fisica, senza materiale di terzi, funziona offline. Libero da copiare, condividere e modificare.',
+      ex: {
+        simple: ['1 kHz · sorgente puntiforme', 'Cosa si muove davvero?', 'Segui la molecola rossa: avanti e indietro, mai via. L’onda viaggia, l’aria resta.'],
+        alley: ['2 sub · 63 Hz', 'Perché al centro della sala suona così forte?', 'Lo stesso segnale da due sub: dove i percorsi sono uguali si sommano, altrove un pettine di buchi.'],
+        gradient: ['Cardioide · 63 Hz', 'Come fa un sub a tacere dietro?', 'Il sub posteriore è invertito e ritardato: dietro la coppia i due si cancellano. Guarda il diagramma polare.'],
+        pulse: ['End-fire · impulso', 'Quattro clic possono diventare uno?', 'Ogni sub spara con il suo ritardo. Davanti i clic arrivano insieme, dietro si sparpagliano.'],
+        arcdelay: ['8 sub · 80 Hz', 'Una linea dritta può comportarsi come un arco?', 'Solo ritardi, nessuno spazio in più. Poi apri Arco fisico negli Esempi e confronta.'],
+        jarray: ['12 casse · 1 kHz', 'Perché un line array è curvo in basso?', 'Dritto in alto per il fondo della sala, curvo in basso per le prime file. Visto di lato.'],
+        tm: ['TM Array · 63 Hz', 'Perché appendere i sub in colonna?', 'Di lato: la colonna tiene le basse lontane dal tetto e dal pavimento, e in pianta resta rotonda.'],
+        room: ['Sala · 50 Hz', 'Cosa fa una sala a un solo sub?', 'Le pareti rigide rimandano il suono: la mappa si riempie di picchi e buchi. Premi Impulso per vedere i rimbalzi.'],
+        helium: ['Elio · 1 kHz', 'Perché l’elio cambia la voce?', 'Stesso 1 kHz, anelli tre volte più distanti: nell’elio il suono corre quasi tre volte più veloce.'],
+        dipole: ['Dipolo · 200 Hz', 'Dove tace un pannello aperto?', 'Davanti e dietro spingono in direzioni opposte: sui lati si cancellano.'],
+      },
+    },
+    es: {
+      kicker: 'Guía', h1: 'El aire no viaja. La onda sí.',
+      lead: 'Cada punto es una molécula de aire entre un millón. Pulsa play y míralas oscilar en su sitio mientras el sonido se aleja del altavoz. Después construye subs end-fire, line arrays y salas, y descubre por qué funcionan.',
+      open: 'Abrir el laboratorio', try: 'Prueba un experimento',
+      s1: 'Tu primer minuto', s1sub: 'Tres movimientos, y el resto del laboratorio tiene sentido.',
+      step1: 'Abre <b>Ejemplos</b> y elige <b>Fuente simple</b>. Busca la molécula roja: nunca deja su sitio.',
+      step2: 'Pulsa <b>×2</b> varias veces. Los anillos se acercan: longitud de onda más corta, misma velocidad del sonido.',
+      step3: 'Cambia la cámara a <b>45°</b> y arrastra. El mismo aire, ahora en tres dimensiones.',
+      s2: 'Cinco maneras de mirar el mismo aire', s2sub: 'Misma física, cinco imágenes. Cada una hace evidente algo distinto.',
+      v_mol: 'Moléculas', v_mol_t: 'Un punto, una molécula. Verde donde el aire se comprime, rojo donde se enrarece.',
+      v_rip: 'Presión', v_rip_t: 'La presión como color, como en una cubeta de ondas: la forma de los frentes de onda de un vistazo.',
+      v_spl: 'Mapa SPL', v_spl_t: 'El nivel en bandas de 3 dB, como en un software de predicción: dónde suena fuerte y dónde no.',
+      v_surf: 'Superficie', v_surf_t: 'La presión como una sábana que se mueve: las compresiones suben, las rarefacciones bajan.',
+      v_block: 'Bloque de aire', v_block_t: 'Un cubo de aire abierto: los frentes de onda en sus caras, alrededor de la fuente.',
+      s3: 'Experimentos', s3sub: 'Cada uno abre el laboratorio ya preparado. Lee la pregunta, intenta adivinar, luego mira.',
+      go: 'Abrir en el laboratorio →',
+      s4: 'Tu caja de herramientas', s4sub: 'Cuatro pestañas a la derecha del laboratorio. Todo cambia en vivo.',
+      t_signal: 'Señal', t_signal_t: 'seno o pulso, frecuencia, velocidad de animación, ancho de pantalla',
+      t_speakers: 'Altavoces', t_speakers_t: '13 instalaciones, 8 altavoces, ganancia, delay y polaridad por caja, paredes y sala',
+      t_medium: 'Medio', t_medium_t: 'aire con temperatura y humedad, helio, CO₂, agua, acero…',
+      t_view: 'Vista', t_view_t: 'colores, etiquetas, diagrama polar, un micrófono que se coloca con un clic',
+      k_freq: 'frecuencia', k_pulse: 'pulso', k_pause: 'pausa', k_fit: 'ajustar 4 λ', k_views: 'vistas', k_cam: 'cámara', k_mic: 'micrófono', k_help: 'todas las teclas',
+      s5: 'Guarda, comparte, enseña', s5txt: 'El menú Guardar crea una imagen con leyenda, un enlace que vuelve a abrir exactamente lo que ves, o un archivo de escena. Una clase puede ser una lista de enlaces.',
+      s6: 'Lo que no es', s6txt: 'Una herramienta para entender, no para diseñar: modelos simples de altavoces, una frecuencia a la vez, paredes rígidas, sin difracción. Para diseñar un sistema se usan MAPP 3D o el software de los fabricantes.',
+      s7: '¿Ideas? ¿Algo no funciona?', s7txt: 'Escribe al creador: sugerencias, errores en la física, bugs. Los mensajes llegan a la página pública del proyecto en GitHub (hace falta una cuenta gratuita). En el laboratorio, el botón Escríbenos también adjunta la escena que estás mirando.',
+      s7btn: 'Escribir al creador',
+      foot: 'Sound Field Lab — inspirado en las animaciones de acústica de Dan Russell (Penn State), en las simulaciones PhET y Falstad y en el seminario de Meyer Sound con Magu. Hecho desde la física, sin material de terceros, funciona sin conexión. Libre para copiar, compartir y modificar.',
+      ex: {
+        simple: ['1 kHz · fuente puntual', '¿Qué se mueve de verdad?', 'Sigue la molécula roja: adelante y atrás, nunca se va. La onda viaja, el aire se queda.'],
+        alley: ['2 subs · 63 Hz', '¿Por qué el centro de la sala suena tan fuerte?', 'La misma señal desde dos subs: donde los caminos son iguales suman, en otros sitios un peine de huecos.'],
+        gradient: ['Cardioide · 63 Hz', '¿Cómo puede un sub callarse detrás?', 'El sub trasero está invertido y retrasado: detrás de la pareja se cancelan. Mira el diagrama polar.'],
+        pulse: ['End-fire · pulso', '¿Pueden cuatro clics volverse uno?', 'Cada sub dispara con su delay. Al frente los clics llegan juntos, detrás se separan.'],
+        arcdelay: ['8 subs · 80 Hz', '¿Puede una línea recta comportarse como un arco?', 'Solo delays, sin espacio extra. Luego abre Arco físico en Ejemplos y compara.'],
+        jarray: ['12 cajas · 1 kHz', '¿Por qué un line array es curvo abajo?', 'Recto arriba para el fondo de la sala, curvo abajo para las primeras filas. Visto de lado.'],
+        tm: ['TM Array · 63 Hz', '¿Por qué colgar los subs en columna?', 'De lado: la columna aleja los graves del techo y del suelo, y en planta sigue siendo redonda.'],
+        room: ['Sala · 50 Hz', '¿Qué le hace una sala a un solo sub?', 'Las paredes rígidas devuelven el sonido: el mapa se llena de picos y huecos. Pulsa Pulso para ver los rebotes.'],
+        helium: ['Helio · 1 kHz', '¿Por qué el helio cambia la voz?', 'El mismo 1 kHz, anillos tres veces más separados: en el helio el sonido corre casi tres veces más rápido.'],
+        dipole: ['Dipolo · 200 Hz', '¿Dónde se calla una pantalla abierta?', 'El frente y el fondo empujan en sentidos opuestos: a los lados se cancelan.'],
+      },
+    },
+    fr: {
+      kicker: 'Guide', h1: 'L’air ne voyage pas. L’onde, oui.',
+      lead: 'Chaque point est une molécule d’air sur un million. Lancez l’animation et regardez-les osciller sur place pendant que le son s’éloigne de l’enceinte. Puis construisez des subs end-fire, des line arrays et des salles, et découvrez pourquoi ils fonctionnent.',
+      open: 'Ouvrir le labo', try: 'Essayer une expérience',
+      s1: 'Votre première minute', s1sub: 'Trois gestes, et le reste du labo prend tout son sens.',
+      step1: 'Ouvrez <b>Exemples</b> et choisissez <b>Source simple</b>. Trouvez la molécule rouge : elle ne quitte jamais sa place.',
+      step2: 'Appuyez plusieurs fois sur <b>×2</b>. Les anneaux se resserrent : longueur d’onde plus courte, même vitesse du son.',
+      step3: 'Passez la caméra à <b>45°</b> et faites glisser. Le même air, maintenant en trois dimensions.',
+      s2: 'Cinq façons de regarder le même air', s2sub: 'Même physique, cinq images. Chacune rend évidente une chose différente.',
+      v_mol: 'Molécules', v_mol_t: 'Un point, une molécule. Vert là où l’air est comprimé, rouge là où il se raréfie.',
+      v_rip: 'Pression', v_rip_t: 'La pression en couleur, comme dans une cuve à ondes : la forme des fronts d’onde en un coup d’œil.',
+      v_spl: 'Carte SPL', v_spl_t: 'Le niveau par bandes de 3 dB, comme dans un logiciel de prédiction : où c’est fort, où ce ne l’est pas.',
+      v_surf: 'Surface', v_surf_t: 'La pression comme un drap qui bouge : les compressions montent, les raréfactions descendent.',
+      v_block: 'Bloc d’air', v_block_t: 'Un cube d’air ouvert : les fronts d’onde sur ses faces, tout autour de la source.',
+      s3: 'Expériences', s3sub: 'Chacune ouvre le labo déjà réglé. Lisez la question, devinez la réponse, puis regardez.',
+      go: 'Ouvrir dans le labo →',
+      s4: 'Votre boîte à outils', s4sub: 'Quatre onglets à droite du labo. Tout change en direct.',
+      t_signal: 'Signal', t_signal_t: 'sinus ou impulsion, fréquence, vitesse d’animation, largeur de l’écran',
+      t_speakers: 'Enceintes', t_speakers_t: '13 installations, 8 enceintes, gain, délai et polarité par enceinte, murs et salle',
+      t_medium: 'Milieu', t_medium_t: 'air avec température et humidité, hélium, CO₂, eau, acier…',
+      t_view: 'Affichage', t_view_t: 'couleurs, étiquettes, diagramme polaire, un micro que l’on pose d’un clic',
+      k_freq: 'fréquence', k_pulse: 'impulsion', k_pause: 'pause', k_fit: 'ajuster 4 λ', k_views: 'vues', k_cam: 'caméra', k_mic: 'micro', k_help: 'toutes les touches',
+      s5: 'Enregistrer, partager, enseigner', s5txt: 'Le menu Enregistrer crée une image avec légende, un lien qui rouvre exactement ce que vous voyez, ou un fichier de scène. Un cours peut être une liste de liens.',
+      s6: 'Ce que ce n’est pas', s6txt: 'Un outil pour comprendre, pas pour concevoir : modèles simples d’enceintes, une fréquence à la fois, murs rigides, pas de diffraction. Pour concevoir un système, utilisez MAPP 3D ou les logiciels des fabricants.',
+      s7: 'Des idées ? Quelque chose ne va pas ?', s7txt: 'Écrivez au créateur : suggestions, erreurs de physique, bugs. Les messages arrivent sur la page publique du projet sur GitHub (un compte gratuit est nécessaire). Dans le labo, le bouton Écrivez-nous joint aussi la scène que vous regardez.',
+      s7btn: 'Écrire au créateur',
+      foot: 'Sound Field Lab — inspiré des animations d’acoustique de Dan Russell (Penn State), des simulations PhET et Falstad et du séminaire Meyer Sound avec Magu. Construit à partir de la physique, sans contenu de tiers, fonctionne hors ligne. Libre de copier, partager et modifier.',
+      ex: {
+        simple: ['1 kHz · source ponctuelle', 'Qu’est-ce qui bouge vraiment ?', 'Suivez la molécule rouge : d’avant en arrière, jamais plus loin. L’onde voyage, l’air reste.'],
+        alley: ['2 subs · 63 Hz', 'Pourquoi le centre de la salle est-il si fort ?', 'Le même signal depuis deux subs : là où les chemins sont égaux ils s’additionnent, ailleurs un peigne de creux.'],
+        gradient: ['Cardioïde · 63 Hz', 'Comment un sub peut-il se taire derrière ?', 'Le sub arrière est inversé et retardé : derrière la paire, les deux s’annulent. Regardez le diagramme polaire.'],
+        pulse: ['End-fire · impulsion', 'Quatre clics peuvent-ils n’en faire qu’un ?', 'Chaque sub tire avec son délai. Devant, les clics arrivent ensemble ; derrière, ils s’étalent.'],
+        arcdelay: ['8 subs · 80 Hz', 'Une ligne droite peut-elle se comporter comme un arc ?', 'Seulement des délais, aucune place en plus. Puis ouvrez Arc physique dans Exemples et comparez.'],
+        jarray: ['12 enceintes · 1 kHz', 'Pourquoi un line array est-il courbé en bas ?', 'Droit en haut pour le fond de la salle, courbé en bas pour les premiers rangs. Vu de côté.'],
+        tm: ['TM Array · 63 Hz', 'Pourquoi accrocher les subs en colonne ?', 'De côté : la colonne éloigne le grave du toit et du sol, et reste ronde en plan.'],
+        room: ['Salle · 50 Hz', 'Que fait une salle à un seul sub ?', 'Les murs rigides renvoient le son : la carte se remplit de pics et de creux. Appuyez sur Impulsion pour voir les rebonds.'],
+        helium: ['Hélium · 1 kHz', 'Pourquoi l’hélium change-t-il la voix ?', 'Le même 1 kHz, des anneaux trois fois plus espacés : dans l’hélium le son va presque trois fois plus vite.'],
+        dipole: ['Dipôle · 200 Hz', 'Où un baffle ouvert devient-il silencieux ?', 'L’avant et l’arrière poussent en sens opposés : sur les côtés ils s’annulent.'],
+      },
+    },
+  };
+  const EXPS = ['simple', 'alley', 'gradient', 'pulse', 'arcdelay', 'jarray', 'tm', 'room', 'helium', 'dipole'];
+  const $ = id => document.getElementById(id);
+  // the lab is index.html on the website, sound-field-lab.html next to this file on disk
+  const APP = location.protocol === 'file:' ? 'sound-field-lab.html' : './';
+
+  // small pictures of the five views (drawn, not screenshots)
+  const VIEWS = {
+    mol: () => { let s = ''; let seed = 7; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < 170; i++) { const x = r() * 200, y = r() * 92, d = Math.hypot(x - 40, y - 46), p = Math.sin(d / 9); s += `<circle cx="${(x + 3 * Math.cos(d / 9)).toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" fill="${p > 0 ? '#3ddc84' : '#ff5a52'}" opacity="${(0.25 + 0.75 * Math.abs(p)).toFixed(2)}"/>`; }
+      return s + '<circle cx="40" cy="46" r="5" fill="#ff6b6b"/>'; },
+    rip: () => { let s = ''; for (let i = 9; i > 0; i--) s += `<circle cx="40" cy="46" r="${i * 18}" fill="${i % 2 ? '#2f8f5b' : '#b8483f'}" opacity="${(0.25 + i * 0.07).toFixed(2)}"/>`; return s + '<circle cx="40" cy="46" r="5" fill="#ff6b6b"/>'; },
+    spl: () => { const c = ['#2a3cff', '#3a8fe0', '#4fd1c0', '#7be05a', '#d8e04a', '#f0a030', '#e5402a']; let s = '';
+      c.forEach((col, i) => { const k = 7 - i; s += `<ellipse cx="${30 + k * 9}" cy="46" rx="${k * 26}" ry="${k * 9}" fill="${col}"/>`; }); return s; },
+    surf: () => { let s = ''; for (let j = 0; j < 9; j++) { let d = 'M'; for (let i = 0; i <= 40; i++) { const x = i * 5, y = 20 + j * 7 + Math.sin(i / 3 - j / 2) * (3 + j * 0.5); d += `${x},${y.toFixed(1)} `; } s += `<polyline points="${d.slice(1)}" fill="none" stroke="${j % 2 ? '#3ddc84' : '#ff5a52'}" stroke-width="1.2" opacity=".85"/>`; } return s; },
+    block: () => '<g fill="none" stroke="#8a929b" stroke-width="1.2"><path d="M100 10 L160 40 L160 80 L100 90 L40 80 L40 40 Z"/><path d="M100 50 L160 40 M100 50 L40 40 M100 50 L100 90"/></g>' +
+      '<g fill="none" stroke-width="2"><path d="M100 50 m -18 9 a 20 12 0 0 1 36 0" stroke="#3ddc84"/><path d="M100 50 m -34 17 a 38 22 0 0 1 68 0" stroke="#ff5a52"/></g><circle cx="100" cy="50" r="4" fill="#ff6b6b"/>',
+  };
+
+  function render(l) {
+    const t = T[l] || T.en;
+    document.documentElement.lang = l;
+    document.title = 'Sound Field Lab — ' + t.kicker;
+    document.querySelectorAll('[data-k]').forEach(el => { const v = t[el.dataset.k]; if (v != null) el.innerHTML = v; });
+    document.querySelectorAll('.langs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === l)));
+    document.querySelectorAll('a.app').forEach(a => { a.href = APP + '#l=' + l; });
+    $('views').innerHTML = ['mol', 'rip', 'spl', 'surf', 'block'].map(k =>
+      `<div class="view"><svg viewBox="0 0 200 92" aria-hidden="true">${VIEWS[k]()}</svg><b>${t['v_' + k]}</b><p>${t['v_' + k + '_t']}</p></div>`).join('');
+    $('exps').innerHTML = EXPS.map(id => { const e = t.ex[id];
+      return `<article class="exp"><span class="tag">${e[0]}</span><h3>${e[1]}</h3><p>${e[2]}</p><a href="${APP}#x=${id}&amp;l=${l}" target="_blank" rel="noopener">${t.go}</a></article>`; }).join('');
+    $('tools').innerHTML = ['signal', 'speakers', 'medium', 'view'].map(k => `<div class="tool"><b>${t['t_' + k]}</b><span>${t['t_' + k + '_t']}</span></div>`).join('');
+    $('keys').innerHTML = [['← →', 'k_freq'], ['P', 'k_pulse'], ['Space', 'k_pause'], ['F', 'k_fit'], ['1–5', 'k_views'], ['C', 'k_cam'], ['M', 'k_mic'], ['?', 'k_help']]
+      .map(([k, v]) => `<span><kbd>${k}</kbd> ${t[v]}</span>`).join('');
+    try { localStorage.setItem('sfl-guide-lang', l); } catch (e) { /* storage blocked: fine */ }
+  }
+  let lang = new URLSearchParams(location.hash.slice(1)).get('l');
+  if (!T[lang]) { try { lang = localStorage.getItem('sfl-guide-lang'); } catch (e) { lang = null; } }
+  if (!T[lang]) lang = (navigator.language || 'en').slice(0, 2);
+  if (!T[lang]) lang = 'en';
+  document.querySelectorAll('.langs button').forEach(b => b.onclick = () => { lang = b.dataset.l; render(lang); });
+  render(lang);
+
+  // ---------------- The hero: molecules around a simple source, moving like in the lab ----------------
+  const cv = $('air'), g = cv.getContext('2d'), still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W = 0, H = 0, pts = [];
+  function size() {
+    const d = Math.min(devicePixelRatio || 1, 2); W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0);
+    let seed = 3; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    pts = []; const n = Math.round(W * H / 260); for (let i = 0; i < n; i++) pts.push([r() * W, r() * H]);
+  }
+  function frame(t) {
+    const narrow = W < 700, cx = narrow ? W + 30 : W * 0.78, cy = narrow ? H * 0.32 : H * 0.55, lam = Math.max(70, W / 9), k = 2 * Math.PI / lam, ph = (still ? 0 : t / 1000) * 2 * Math.PI / 2.2;
+    g.clearRect(0, 0, W, H);
+    for (const [x, y] of pts) {
+      const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy) || 1, a = ph - k * r, fall = Math.max(0.35, Math.sqrt(40 / r));
+      const s = 7 * fall * Math.cos(a), p = Math.sin(a);
+      g.fillStyle = p > 0 ? '#3ddc84' : '#ff5a52'; g.globalAlpha = 0.18 + 0.7 * Math.abs(p);
+      g.beginPath(); g.arc(x + dx / r * s, y + dy / r * s, 1.6, 0, 6.2832); g.fill();
+    }
+    g.globalAlpha = 1; g.fillStyle = '#ff6b6b'; g.beginPath(); g.arc(cx, cy, 9 + 3 * Math.cos(ph), 0, 6.2832); g.fill();
+    if (!still) requestAnimationFrame(frame);
+  }
+  addEventListener('resize', size); size(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
