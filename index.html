@@ -103,6 +103,9 @@ main { display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0
 .hint { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); font-size: 12px; color: var(--muted);
   padding: 4px 10px; pointer-events: none; white-space: nowrap; transition: opacity .6s; }
 .hint.gone { opacity: 0; }
+.toast { position: absolute; left: 50%; top: 100px; transform: translateX(-50%); padding: 8px 14px; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); }
+#fire { font-weight: 600; }
+.ex-menu .linkbox { width: 100%; font: 12px ui-monospace, Menlo, monospace; margin-top: 6px; }
 
 /* ---------- sidebar ---------- */
 aside { background: var(--panel); border-left: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr; min-height: 0; }
@@ -212,6 +215,16 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     <button class="hbtn" id="exBtn" aria-haspopup="true" aria-expanded="false"><span data-i18n="examples">Examples</span> ▾</button>
     <div class="ex-menu card" id="exMenu" hidden></div>
   </div>
+  <div class="relwrap">
+    <button class="hbtn" id="saveBtn" aria-haspopup="true" aria-expanded="false"><span data-i18n="save">Save</span> ▾</button>
+    <div class="ex-menu card" id="saveMenu" hidden>
+      <button id="svPng"><b data-i18n="sv_png">Image (PNG)</b><small data-i18n="svd_png">What you see, with a caption</small></button>
+      <button id="svLink"><b data-i18n="sv_link">Copy link to this scene</b><small data-i18n="svd_link">Whoever opens it sees the app exactly like this</small></button>
+      <button id="svJson"><b data-i18n="sv_json">Save scene (file)</b><small data-i18n="svd_json">To prepare a lesson and open it later</small></button>
+      <button id="svOpen"><b data-i18n="sv_open">Open scene…</b><small data-i18n="svd_open">A scene file saved before</small></button>
+      <input type="file" id="svFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
   <select class="hsel" id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="it">IT</option></select>
   <button class="hbtn icon" id="theme" title="Light / dark" aria-label="Light / dark">◐</button>
   <button class="hbtn icon" id="helpBtn" title="Keyboard" aria-label="Help">?</button>
@@ -249,6 +262,7 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     </div>
     <div class="transport card">
       <button class="play" id="play" title="Space" aria-label="Play / pause">❚❚</button>
+      <button id="fire" title="P"><span data-i18n="fire">Pulse</span></button>
       <div class="vsep"></div>
       <button id="half" title="÷2 (Shift ←)">÷2</button>
       <span class="fq num" id="fq">1 kHz</span>
@@ -262,12 +276,14 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
         <div data-i18n="legend">Level (dB, relative to the loudest point)</div>
         <div class="bar" id="legendBar"></div>
         <div class="ticks" id="legendTicks"></div>
+        <div class="note" id="legendNote" hidden data-i18n="spl_sine">SPL map of the continuous sine</div>
       </div>
       <div class="polar card" id="polarCard" hidden>
         <canvas id="polar" width="360" height="360"></canvas>
         <div class="t" id="polarT"></div>
       </div>
     </div>
+    <div class="toast card" id="toast" hidden></div>
     <div class="hint card" id="hint" data-i18n="hint">Drag to rotate · double-click resets · ? for keys</div>
   </div>
 
@@ -281,6 +297,11 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
 
     <!-- SIGNAL -->
     <div class="panel" data-panel="signal">
+      <div class="sec">
+        <h3 data-i18n="sig">Signal</h3>
+        <div class="chips" id="sigChips"><button data-sig="sine" data-i18n="sig_sine">Continuous sine</button><button data-sig="pulse" data-i18n="sig_pulse">Pulse (click)</button></div>
+        <div class="note" id="signote"></div>
+      </div>
       <div class="sec">
         <h3 data-i18n="freq">Frequency</h3>
         <div class="ctl">
@@ -336,6 +357,12 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
         <div id="bndCtl" class="sec">
           <div class="ctl"><label><span data-i18n="bdist">Distance from the system</span><output id="o_bd"></output></label><input id="bd" type="range" min="0" max="1000" step="1"></div>
           <div class="ctl"><label><span data-i18n="brefl">Reflection</span><output id="o_br"></output></label><input id="br" type="range" min="0" max="100" step="1"></div>
+          <div id="roomCtl" class="sec">
+            <div class="ctl"><label><span id="rwLbl">Room width</span><output id="o_rw"></output></label><input id="rw" type="range" min="0" max="1000" step="1"></div>
+            <div class="ctl"><label><span data-i18n="rdepth">Room length</span><output id="o_rd"></output></label><input id="rd" type="range" min="0" max="1000" step="1"></div>
+            <div class="row"><span class="note" data-i18n="rorder">Reflections up to order</span><div class="chips" id="roChips"></div></div>
+            <div class="note" data-i18n="roomnote">Rigid walls as mirror images.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -499,6 +526,9 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     steer:    { params: ['n', 'spacing', 'angle'], def: { n: 16, spacing: 0.12, angle: 15 }, elem: 'mini', plane: 'section' },
     jarray:   { params: ['n', 'angle'], def: { n: 12, angle: 30 }, elem: 'line', plane: 'section' },
     delay:    { params: ['dist'], def: { dist: 20 }, elem: 'box' },
+    // TM Array (Meyer Sound, with Thomas Mundorf): subs flown in a column, a line array in the vertical and a
+    // point source in the horizontal (ProSoundWeb, "How the TM Array for subwoofers works"; 10 boxes "a good compromise")
+    tm:       { params: ['n', 'spacing'], def: { n: 10, spacing: 0.6 }, elem: 'sub', plane: 'section' },
   };
   const PARAM_RANGE = { n: [1, 24, 1], spacing: [0.1, 6, 0.05], depth: [0.1, 4, 0.01], rear: [-12, 6, 0.5],
                         angle: [-80, 120, 1], width: [1, 40, 0.5], dist: [2, 80, 0.5] };
@@ -554,6 +584,7 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
         for (const e of out) { e.y = -(e.y - cy); e.aim = -e.aim; }   // screen convention: y grows downwards
         break; }
       case 'delay': out.push(E(0, 0, 0)); out.push(E(p.dist, 0, 0, { delay: p.dist / c })); break;
+      case 'tm': for (let i = 0; i < n; i++) out.push(E(0, across(i, p.spacing), 0)); break;   // vertical column, y down
       default: out.push(E(0, 0, 0));
     }
     return { elements: out, plane: (INSTALLS[inst] && INSTALLS[inst].plane) || 'plan' };
@@ -563,25 +594,53 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
   // Sources with complex weights w = gain · polarity · e^(−iωτ); a boundary adds mirror images (× reflection).
   function buildSources(elements, plane, boundary, f) {
     const list = [];
-    let wsum = 0, cx = 0, cy = 0, nn = 0, minX = Infinity, maxY = -Infinity;
+    let wsum = 0, cx = 0, cy = 0, nn = 0, minX = Infinity, maxY = -Infinity, maxX = -Infinity, maxAY = 0;
     for (const e of elements) {
       const sz = sizeIn(e.type, plane);
       minX = Math.min(minX, e.x - sz[0] - 0.1); maxY = Math.max(maxY, e.y + sz[1] / 2 + 0.1);
       if (e.mute) continue;
       const g = Math.pow(10, e.gain / 20), ph = -2 * PI * f * e.delay;
       list.push({ x: e.x, y: e.y, ca: Math.cos(e.aim), sa: Math.sin(e.aim), wr: g * e.pol * Math.cos(ph), wi: g * e.pol * Math.sin(ph),
-                  type: e.type, size: sz, dir: dirFn(e.type, plane), img: false });
-      wsum += g; cx += e.x; cy += e.y; nn++;
+                  amp: g * e.pol, tau: e.delay, type: e.type, size: sz, dir: dirFn(e.type, plane), img: false });
+      wsum += g; cx += e.x; cy += e.y; nn++; maxX = Math.max(maxX, e.x + 0.1); maxAY = Math.max(maxAY, Math.abs(e.y) + sz[1] / 2 + 0.1);
     }
     let wall = null;
     if (boundary && boundary.kind !== 'none' && list.length) {
       const R = boundary.refl;
       if (boundary.kind === 'back') { const X = minX - boundary.dist; wall = { kind: 'back', at: X };
-        for (const s of list.slice()) list.push(Object.assign({}, s, { x: 2 * X - s.x, ca: -s.ca, wr: s.wr * R, wi: s.wi * R, img: true })); }
-      else { const Y = maxY + boundary.dist; wall = { kind: 'side', at: Y };
-        for (const s of list.slice()) list.push(Object.assign({}, s, { y: 2 * Y - s.y, sa: -s.sa, wr: s.wr * R, wi: s.wi * R, img: true })); }
+        for (const s of list.slice()) list.push(Object.assign({}, s, { x: 2 * X - s.x, ca: -s.ca, wr: s.wr * R, wi: s.wi * R, amp: s.amp * R, img: true })); }
+      else if (boundary.kind === 'side') { const Y = maxY + boundary.dist; wall = { kind: 'side', at: Y };
+        for (const s of list.slice()) list.push(Object.assign({}, s, { y: 2 * Y - s.y, sa: -s.sa, wr: s.wr * R, wi: s.wi * R, amp: s.amp * R, img: true })); }
+      else if (boundary.kind === 'room') {
+        // rectangular room (plan: four walls; section: back, front, floor, ceiling). Mirror images up to boundary.order.
+        // The system sits boundary.dist in front of the back wall; the room is never smaller than the system.
+        const x0 = minX - boundary.dist, x1 = Math.max(x0 + boundary.depth, maxX + 0.5);
+        const yc = cy / Math.max(nn, 1), hw = Math.max(boundary.width / 2, maxAY + Math.abs(yc) + 0.3), y0 = yc - hw, y1 = yc + hw;
+        wall = { kind: 'room', x0, x1, y0, y1 };
+        const N = Math.max(1, Math.min(3, Math.round(boundary.order || 1)));
+        const img1 = (v, a, b) => { const L = b - a, out = [];
+          for (let k = -N; k <= N; k++) {
+            const o1 = 2 * Math.abs(k); if (o1 <= N) out.push([v + 2 * k * L, false, o1]);
+            const o2 = Math.abs(2 * k - 1); if (o2 <= N) out.push([2 * a - v + 2 * k * L, true, o2]);
+          }
+          return out; };
+        for (const s of list.slice()) for (const [xi, fx, ox] of img1(s.x, x0, x1)) for (const [yi, fy, oy] of img1(s.y, y0, y1)) {
+          const o = ox + oy; if (o === 0 || o > N) continue;
+          const g = Math.pow(R, o);
+          list.push(Object.assign({}, s, { x: xi, y: yi, ca: fx ? -s.ca : s.ca, sa: fy ? -s.sa : s.sa, wr: s.wr * g, wi: s.wi * g, amp: s.amp * g, img: true, order: o }));
+        }
+      }
     }
     return { list, wsum: wsum || 1, cx: nn ? cx / nn : 0, cy: nn ? cy / nn : 0, wall };
+  }
+
+  const outside = (W, x, y) => !W ? false : W.kind === 'back' ? x < W.at : W.kind === 'side' ? y > W.at : (x < W.x0 || x > W.x1 || y < W.y0 || y > W.y1);
+  // inside a cabinet, or too close to a point source to draw a molecule
+  function inSource(s, dx, dy, z, r, vis, r0) {
+    if (s.img) return false;
+    if (s.size[0] === 0) return vis && r < r0 * 1.3;
+    const lx = dx * s.ca + dy * s.sa, ly = -dx * s.sa + dy * s.ca;
+    return lx < 0 && lx > -s.size[0] && Math.abs(ly) < s.size[1] / 2 && Math.abs(z) < s.size[2] / 2;
   }
 
   // Evaluate at n points (P3 = x, y, z triples). 9 floats per point:
@@ -596,15 +655,11 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     const W = S.wall;
     for (let i = 0; i < n; i++) {
       const x = P3[3 * i], y = P3[3 * i + 1], z = P3[3 * i + 2], q = 9 * i;
-      let inside = W ? (W.kind === 'back' ? x < W.at : y > W.at) : false;
+      let inside = outside(W, x, y);
       let uxr = 0, uxi = 0, uyr = 0, uyi = 0, uzr = 0, uzi = 0, pr = 0, pi = 0;
       if (!inside) for (const s of list) {
         const dx = x - s.x, dy = y - s.y, r = Math.sqrt(dx * dx + dy * dy + z * z);
-        if (!s.img) {
-          if (s.size[0] === 0) { if (vis && r < r0 * 1.3) { inside = true; break; } }
-          else { const lx = dx * s.ca + dy * s.sa, ly = -dx * s.sa + dy * s.ca;
-                 if (lx < 0 && lx > -s.size[0] && Math.abs(ly) < s.size[1] / 2 && Math.abs(z) < s.size[2] / 2) { inside = true; break; } }
-        }
+        if (inSource(s, dx, dy, z, r, vis, r0)) { inside = true; break; }
         const ir = 1 / Math.max(r, 1e-9), cth = (dx * s.ca + dy * s.sa) * ir, sth = Math.sqrt(Math.max(0, 1 - cth * cth));
         const a = s.dir(k, f, cth, sth) * spread(r) * Math.exp(-att * r);
         const cr = Math.cos(k * r), sr = -Math.sin(k * r);
@@ -615,6 +670,50 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
       if (inside) { out[q + 6] = NaN; continue; }
       out[q] = uxr; out[q + 1] = uxi; out[q + 2] = uyr; out[q + 3] = uyi; out[q + 4] = uzr; out[q + 5] = uzi; out[q + 6] = pr; out[q + 7] = pi;
       out[q + 8] = vis ? 1 / (S.wsum * spread(Math.hypot(x - S.cx, y - S.cy, z))) : 1;
+    }
+    return out;
+  }
+
+  // ---------------- Pulse (time domain) ----------------
+  // A band-limited click: Ricker wavelet centred on f for the pressure, its integral (a Gaussian derivative) for
+  // the displacement. Each box fires at its delay; gain, polarity, directivity (taken at f) and reflections as above.
+  const ricker = (u, f) => { const x = PI * f * u, x2 = x * x; return (1 - 2 * x2) * Math.exp(-x2); };
+  const rickerDisp = (u, f) => { const x = PI * f * u; return -x * Math.exp(-x * x) / 0.42888; };     // peak = 1
+  const pulseHalf = f => 1.3 / f;                                                                    // beyond this the wavelet is < 1e-6
+  // per point and per source: amplitude and arrival time (T = r / c + delay); unit vector for the displacement
+  function preparePulse(S, P3, n, o) {
+    const list = S.list, m = list.length, vis = o.law !== 'physical', r0 = o.r0 || 0.05, k = o.k, f = o.f, c = o.c;
+    const att = (o.alpha || 0) * Math.LN10 / 20;
+    const spread = vis ? (r => Math.max(0.3, Math.sqrt(2 * r0 / Math.max(r, r0)))) : (r => 1 / Math.max(r, o.rmin || 0.1));
+    const A = new Float32Array(n * m), T = new Float32Array(n * m), U = new Float32Array(n * m * 3), Q = new Float32Array(n), OK = new Uint8Array(n);
+    let tMax = 0;
+    for (let i = 0; i < n; i++) {
+      const x = P3[3 * i], y = P3[3 * i + 1], z = P3[3 * i + 2];
+      let inside = outside(S.wall, x, y);
+      for (let j = 0; j < m && !inside; j++) {
+        const s = list[j], dx = x - s.x, dy = y - s.y, r = Math.sqrt(dx * dx + dy * dy + z * z);
+        if (inSource(s, dx, dy, z, r, vis, r0)) { inside = true; break; }
+        const ir = 1 / Math.max(r, 1e-9), cth = (dx * s.ca + dy * s.sa) * ir, sth = Math.sqrt(Math.max(0, 1 - cth * cth)), q = i * m + j;
+        A[q] = s.amp * s.dir(k, f, cth, sth) * spread(r) * Math.exp(-att * r);
+        T[q] = r / c + s.tau; if (T[q] > tMax) tMax = T[q];
+        U[3 * q] = dx * ir; U[3 * q + 1] = dy * ir; U[3 * q + 2] = z * ir;
+      }
+      if (inside) continue;
+      OK[i] = 1; Q[i] = vis ? 1 / (S.wsum * spread(Math.hypot(x - S.cx, y - S.cy, z))) : 1;
+    }
+    return { n, m, A, T, U, Q, OK, f, tMax };
+  }
+  // pressure and displacement at time t for every prepared point: out = [p, ux, uy, uz] × n
+  function pulseField(prep, t, out) {
+    const { n, m, A, T, U, OK, f } = prep, h = pulseHalf(f);
+    for (let i = 0; i < n; i++) {
+      let p = 0, ux = 0, uy = 0, uz = 0;
+      if (OK[i]) for (let j = 0, q = i * m; j < m; j++, q++) {
+        const u = t - T[q]; if (u <= -h || u >= h) continue;
+        const a = A[q]; p += a * ricker(u, f); const d = a * rickerDisp(u, f);
+        ux += d * U[3 * q]; uy += d * U[3 * q + 1]; uz += d * U[3 * q + 2];
+      }
+      out[4 * i] = p; out[4 * i + 1] = ux; out[4 * i + 2] = uy; out[4 * i + 3] = uz;
     }
     return out;
   }
@@ -630,7 +729,8 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     return L;
   }
 
-  const api = { PI, DEG, bessj1, isoAbsorption, thorp, MEDIA, ELEMENTS, INSTALLS, PARAM_RANGE, layout, buildSources, evaluate, polar, dirFn, sizeIn, horn, baffle };
+  const api = { PI, DEG, bessj1, isoAbsorption, thorp, MEDIA, ELEMENTS, INSTALLS, PARAM_RANGE, layout, buildSources, evaluate, polar, dirFn, sizeIn, horn, baffle,
+    ricker, rickerDisp, pulseHalf, preparePulse, pulseField };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SFP = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -661,6 +761,22 @@ const I18N = {
     sys: '{n} × {e} · {len}', sys1: '1 × {e}', mic_ro: '{db} dB re 1 box at 1 m · {ph}°', custom: 'custom',
     polar_t: 'Polar at {r} · {f}', section: 'Vertical section (up ↑)', plan: 'Plan view',
     th_n: '#', th_g: 'dB', th_d: 'ms', th_p: 'Pol', th_m: 'On',
+    save: 'Save', sv_png: 'Image (PNG)', svd_png: 'What you see, with a caption', sv_link: 'Copy link to this scene',
+    svd_link: 'Whoever opens it sees the app exactly like this', sv_json: 'Save scene (file)', svd_json: 'To prepare a lesson and open it later',
+    sv_open: 'Open scene…', svd_open: 'A scene file saved before', copied: 'Link copied',
+    copyfail: 'Copy not allowed here: select the link in the menu', loaded: 'Scene opened', loadfail: 'This is not a Sound Field Lab scene',
+    fire: 'Pulse', sig: 'Signal', sig_sine: 'Continuous sine', sig_pulse: 'Pulse (click)',
+    signote_sine: 'A steady tone at the frequency below: what an analyser shows once the sound has settled.',
+    signote_pulse: 'A short click centred on the frequency below, fired by each box at its own delay: watch where the arrivals add up and where they do not. The SPL map stays the continuous sine; directivity is taken at the centre frequency.',
+    pulse_t: 't = {t} · slowed {x}×', spl_sine: 'SPL map of the continuous sine',
+    b_room: 'Room', rwidth: 'Room width', rheight: 'Room height', rdepth: 'Room length', rorder: 'Reflections up to order',
+    roomnote: 'Rigid walls as mirror images of every box (order 1 = one bounce). Real rooms also absorb by frequency and diffract around objects: this is the first idea, not a room prediction.',
+    i_tm: 'TM Array',
+    n_tm: 'Subs flown in a column (Meyer Sound technique developed with Thomas Mundorf): a line array in the vertical, a point source in the horizontal. The column narrows the low end in height; the small footprint keeps it omnidirectional around.',
+    ex_tm: 'TM Array', exd_tm: '10 subs flown in a column, 63 Hz, side view',
+    ex_room: 'Sub in a room', exd_room: 'One sub in a 20 × 12 m room, reflections up to order 2, 50 Hz',
+    ex_pulse: 'End-fire pulse', exd_pulse: 'A click from 4 subs in end-fire: together in front, spread out behind',
+    k_p: 'Fire a pulse (click)',
     // installations
     i_single: 'Single', i_line: 'Straight line', i_arc: 'Arc', i_arcdelay: 'Arc delay', i_gradient: 'Gradient (cardioid)',
     i_invstack: 'Inverted stack', i_endfire: 'End-fire', i_lr: 'Left / right', i_uni: 'End-fire wings', i_steer: 'Steered line',
@@ -754,6 +870,22 @@ const I18N = {
     sys: '{n} × {e} · {len}', sys1: '1 × {e}', mic_ro: '{db} dB re 1 caja a 1 m · {ph}°', custom: 'personalizado',
     polar_t: 'Polar a {r} · {f}', section: 'Sección vertical (arriba ↑)', plan: 'Planta',
     th_n: '#', th_g: 'dB', th_d: 'ms', th_p: 'Pol', th_m: 'On',
+    save: 'Guardar', sv_png: 'Imagen (PNG)', svd_png: 'Lo que ves, con una leyenda', sv_link: 'Copiar enlace a esta escena',
+    svd_link: 'Quien lo abra verá la app exactamente así', sv_json: 'Guardar escena (archivo)', svd_json: 'Para preparar una clase y abrirla después',
+    sv_open: 'Abrir escena…', svd_open: 'Un archivo de escena guardado antes', copied: 'Enlace copiado',
+    copyfail: 'Aquí no se puede copiar: selecciona el enlace en el menú', loaded: 'Escena abierta', loadfail: 'No es una escena de Sound Field Lab',
+    fire: 'Pulso', sig: 'Señal', sig_sine: 'Seno continuo', sig_pulse: 'Pulso (clic)',
+    signote_sine: 'Un tono estable a la frecuencia de abajo: lo que muestra un analizador cuando el sonido se ha asentado.',
+    signote_pulse: 'Un clic corto centrado en la frecuencia de abajo, disparado por cada caja con su delay: mira dónde suman las llegadas y dónde no. El mapa SPL sigue siendo el seno continuo; la directividad se toma en la frecuencia central.',
+    pulse_t: 't = {t} · {x}× más lento', spl_sine: 'Mapa SPL del seno continuo',
+    b_room: 'Sala', rwidth: 'Ancho de la sala', rheight: 'Altura de la sala', rdepth: 'Largo de la sala', rorder: 'Reflexiones hasta el orden',
+    roomnote: 'Paredes rígidas como imágenes especulares de cada caja (orden 1 = un rebote). Las salas reales también absorben según la frecuencia y difractan alrededor de los objetos: es la primera idea, no una predicción de sala.',
+    i_tm: 'TM Array',
+    n_tm: 'Subs colgados en columna (técnica de Meyer Sound desarrollada con Thomas Mundorf): un line array en vertical y una fuente puntual en horizontal. La columna estrecha los graves en altura; la huella pequeña los mantiene omnidireccionales alrededor.',
+    ex_tm: 'TM Array', exd_tm: '10 subs colgados en columna, 63 Hz, vista lateral',
+    ex_room: 'Sub en una sala', exd_room: 'Un sub en una sala de 20 × 12 m, reflexiones hasta el orden 2, 50 Hz',
+    ex_pulse: 'Pulso end-fire', exd_pulse: 'Un clic de 4 subs en end-fire: juntos al frente, separados detrás',
+    k_p: 'Disparar un pulso (clic)',
     i_single: 'Única', i_line: 'Línea recta', i_arc: 'Arco', i_arcdelay: 'Arco por delay', i_gradient: 'Gradiente (cardioide)',
     i_invstack: 'Stack invertido', i_endfire: 'End-fire', i_lr: 'Izquierda / derecha', i_uni: 'Alas end-fire', i_steer: 'Línea direccionada',
     i_jarray: 'Line array (J)', i_delay: 'Torre de delay', i_custom: 'Personalizada',
@@ -841,6 +973,22 @@ const I18N = {
     sys: '{n} × {e} · {len}', sys1: '1 × {e}', mic_ro: '{db} dB rispetto a 1 cassa a 1 m · {ph}°', custom: 'personalizzato',
     polar_t: 'Polare a {r} · {f}', section: 'Sezione verticale (su ↑)', plan: 'Pianta',
     th_n: '#', th_g: 'dB', th_d: 'ms', th_p: 'Pol', th_m: 'On',
+    save: 'Salva', sv_png: 'Immagine (PNG)', svd_png: 'Quello che vedi, con una didascalia', sv_link: 'Copia il link a questa scena',
+    svd_link: 'Chi lo apre vede l’app esattamente così', sv_json: 'Salva la scena (file)', svd_json: 'Per preparare una lezione e riaprirla dopo',
+    sv_open: 'Apri una scena…', svd_open: 'Un file di scena salvato prima', copied: 'Link copiato',
+    copyfail: 'Qui non si può copiare: seleziona il link nel menu', loaded: 'Scena aperta', loadfail: 'Non è una scena di Sound Field Lab',
+    fire: 'Impulso', sig: 'Segnale', sig_sine: 'Seno continuo', sig_pulse: 'Impulso (clic)',
+    signote_sine: 'Un tono stabile alla frequenza qui sotto: quello che mostra un analizzatore quando il suono si è assestato.',
+    signote_pulse: 'Un breve clic centrato sulla frequenza qui sotto, sparato da ogni cassa con il suo ritardo: guarda dove gli arrivi si sommano e dove no. La mappa SPL resta quella del seno continuo; la direttività è presa alla frequenza centrale.',
+    pulse_t: 't = {t} · rallentato {x}×', spl_sine: 'Mappa SPL del seno continuo',
+    b_room: 'Sala', rwidth: 'Larghezza della sala', rheight: 'Altezza della sala', rdepth: 'Lunghezza della sala', rorder: 'Riflessioni fino all’ordine',
+    roomnote: 'Pareti rigide come immagini speculari di ogni cassa (ordine 1 = un rimbalzo). Le sale vere assorbono anche in base alla frequenza e diffrangono attorno agli oggetti: è la prima idea, non una previsione della sala.',
+    i_tm: 'TM Array',
+    n_tm: 'Sub appesi in colonna (tecnica Meyer Sound sviluppata con Thomas Mundorf): un line array in verticale, una sorgente puntiforme in orizzontale. La colonna stringe le basse in altezza; l’ingombro piccolo le tiene omnidirezionali tutto intorno.',
+    ex_tm: 'TM Array', exd_tm: '10 sub appesi in colonna, 63 Hz, vista di lato',
+    ex_room: 'Sub in una sala', exd_room: 'Un sub in una sala di 20 × 12 m, riflessioni fino al 2° ordine, 50 Hz',
+    ex_pulse: 'Impulso end-fire', exd_pulse: 'Un clic da 4 sub in end-fire: insieme davanti, sparpagliati dietro',
+    k_p: 'Spara un impulso (clic)',
     i_single: 'Singolo', i_line: 'Linea dritta', i_arc: 'Arco', i_arcdelay: 'Arc delay', i_gradient: 'Gradiente (cardioide)',
     i_invstack: 'Stack invertito', i_endfire: 'End-fire', i_lr: 'Sinistra / destra', i_uni: 'Ali end-fire', i_steer: 'Linea orientata',
     i_jarray: 'Line array (J)', i_delay: 'Torre di ritardo', i_custom: 'Personalizzata',
@@ -917,7 +1065,8 @@ const I18N = {
     f: 1000, amp: 0.4, cyc: 2, tp: false, width: 1.4, lock: true,
     medium: 'air', temp: 20, rh: 50, cc: 343, absorb: true,
     inst: 'single', elem: 'point', params: {}, custom: false, customEls: null,
-    bnd: 'none', bdist: 1, brefl: 0.9,
+    bnd: 'none', bdist: 1, brefl: 0.9, rw: 12, rd: 20, ro: 1,   // boundary; room width (height in a section), length, reflection order
+    sig: 'sine',                                                   // 'sine' (continuous) or 'pulse' (a click)
     mode: 'molecules', cam: 'top', n: 6000, color: true, hl: true, labels: true, polar: false, micOn: false, mic: null, span: 36,
     tab: 'signal', lang: 'en',
   };
@@ -979,7 +1128,7 @@ const I18N = {
   let lastPlane = null;
   function invalidate() { ver++; S = null; polarDirty = true; texDirty = true; }
   function invalidateView() { texDirty = true; polarDirty = true; }
-  const bnd = () => st.bnd === 'none' ? null : { kind: st.bnd, dist: st.bdist, refl: st.brefl };
+  const bnd = () => st.bnd === 'none' ? null : { kind: st.bnd, dist: st.bdist, refl: st.brefl, width: st.rw, depth: st.rd, order: st.ro };
   function sources() { if (!S) S = P.buildSources(scene.elements, scene.plane, bnd(), st.f); return S; }
 
   // ---------------- View region and camera ----------------
@@ -1035,6 +1184,46 @@ const I18N = {
   const pRaw = (F, o, cp, sp) => F[o + 6] * sp + F[o + 7] * cp;
   const pN = (F, o, cp, sp) => Math.max(-1, Math.min(1, pRaw(F, o, cp, sp) * F[o + 8]));
 
+  // ---------------- Pulse (a click in the time domain) ----------------
+  // The click crosses the screen in about 4 s at the default animation speed, then fires again.
+  const SINE_BUDGET = 8e6, PULSE_BUDGET = 1.2e6;                   // point × source evaluations: per recompute / per frame
+  let pulseT = 0, pulseWait = 0;
+  const pulseSlow = () => 4 * (st.cyc / 2) / Math.max(1e-6, st.width / c());     // real seconds per simulated second
+  let endKey = '', endT = 0;
+  function pulseEnd() {                                            // last arrival inside the view, from any source or reflection
+    const R = region(), key = [ver, R.Lx, R.Ly, R.cx, R.cy].join(',');
+    if (key !== endKey) {
+      endKey = key; endT = 0;
+      for (const s2 of sources().list) for (const a of [-1, 1]) for (const b of [-1, 1])
+        endT = Math.max(endT, Math.hypot(R.cx + a * R.Lx - s2.x, R.cy + b * R.Ly - s2.y) / c() + s2.tau);
+    }
+    return endT + P.pulseHalf(st.f);
+  }
+  function fire() { st.sig = 'pulse'; pulseT = -P.pulseHalf(st.f); pulseWait = 0; paused = false; syncUI(false); }
+  const pcache = {};
+  function pulsePrep(name, key, mkPts, r0) {
+    const full = [ver, key, r0.toFixed(7), st.width, W, H, st.f, c()].join('|');
+    let e = pcache[name];
+    if (!e || e.key !== full) {
+      const P3 = mkPts(), n = P3.length / 3;
+      e = pcache[name] = { key: full, P3, prep: P.preparePulse(sources(), P3, n, { k: kk(), f: st.f, c: c(), alpha: alpha(), law: 'visual', r0 }), out: new Float32Array(4 * n) };
+    }
+    P.pulseField(e.prep, pulseT, e.out);
+    return e;
+  }
+  // One accessor for both signals: p = colour (−1…1), raw = pressure for the surface, dx/dy/dz = displacement
+  function sampler(name, key, mkPts, r0, cp, sp) {
+    if (st.sig === 'pulse') {
+      const e = pulsePrep(name, key, mkPts, r0), o = e.out, Q = e.prep.Q, OK = e.prep.OK;
+      return { P3: e.P3, n: e.prep.n, ok: i => OK[i] === 1, p: i => Math.max(-1, Math.min(1, o[4 * i] * Q[i])), raw: i => o[4 * i],
+               dx: i => o[4 * i + 1], dy: i => o[4 * i + 2], dz: i => o[4 * i + 3] };
+    }
+    const F = field(name, key, mkPts, 'visual', r0).F, P3 = cache[name].P3;
+    return { P3, n: P3.length / 3, ok: i => !Number.isNaN(F[9 * i + 6]), p: i => pN(F, 9 * i, cp, sp), raw: i => pRaw(F, 9 * i, cp, sp),
+             dx: i => dX(F, 9 * i, cp, sp), dy: i => dY(F, 9 * i, cp, sp), dz: i => dZ(F, 9 * i, cp, sp) };
+  }
+  const budgetN = n => st.sig === 'pulse' ? Math.min(n, Math.max(200, Math.floor(PULSE_BUDGET / Math.max(1, sources().list.length)))) : n;
+
   // ---------------- Molecules ----------------
   let px = [], py = [], pz = [], qIn = [], qOut = [];
   let seed = 12345; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -1073,19 +1262,19 @@ const I18N = {
   }
   let order = null, orderKey = '';
   function drawMolecules(pr, R, V, cp, sp) {
-    const s = sources(), n = px.length, top = pr.top, hz = top ? 0 : Math.min(0.12 * R.Lx, 0.15 * lam());
-    const fc = field('mol', [n, R.Lx, R.Ly, hz, R.cx, R.cy].join(','), () => {
+    const s = sources(), n = budgetN(px.length), top = pr.top, hz = top ? 0 : Math.min(0.12 * R.Lx, 0.15 * lam());
+    const sm = sampler('mol', [n, R.Lx, R.Ly, hz, R.cx, R.cy].join(','), () => {
       const a = new Float32Array(3 * n);
       for (let i = 0; i < n; i++) { a[3 * i] = R.cx + px[i] * 2 * R.Lx; a[3 * i + 1] = R.cy + py[i] * 2 * R.Ly; a[3 * i + 2] = pz[i] * 2 * hz; }
       return a;
-    }, 'visual', V.r0), F = fc.F, P3 = fc.P3, Asc = V.A / s.wsum;
+    }, V.r0, cp, sp), P3 = sm.P3, Asc = V.A / s.wsum;
     if (top) {
       const b = newBuckets(), r = Math.max(1.2, Math.min(2.4, W / 600));
       for (let i = 0; i < n; i++) {
-        const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
-        const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp);
+        if (!sm.ok(i)) continue;
+        const x = P3[3 * i] + Asc * sm.dx(i), y = P3[3 * i + 1] + Asc * sm.dy(i);
         const X = pr.X(x, y), Y = pr.Y(x, y, 0);
-        const bb = b[st.color ? bIdx(pN(F, o, cp, sp)) : NB - 1]; bb.moveTo(X + r, Y); bb.arc(X, Y, r, 0, 2 * PI);
+        const bb = b[st.color ? bIdx(sm.p(i)) : NB - 1]; bb.moveTo(X + r, Y); bb.arc(X, Y, r, 0, 2 * PI);
       }
       paint(b, true); return;
     }
@@ -1102,9 +1291,9 @@ const I18N = {
     const rB = Math.max(2.2, Math.min(3.8, W / 380));
     const XS = new Float32Array(n), YS = new Float32Array(n), PP = new Float32Array(n), SC = new Float32Array(n), shadow = new Path2D();
     for (let i = 0; i < n; i++) {
-      const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
-      const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp), z = P3[3 * i + 2] + Asc * dZ(F, o, cp, sp);
-      XS[i] = pr.X(x, y, z); YS[i] = pr.Y(x, y, z); PP[i] = pN(F, o, cp, sp);
+      if (!sm.ok(i)) continue;
+      const x = P3[3 * i] + Asc * sm.dx(i), y = P3[3 * i + 1] + Asc * sm.dy(i), z = P3[3 * i + 2] + Asc * sm.dz(i);
+      XS[i] = pr.X(x, y, z); YS[i] = pr.Y(x, y, z); PP[i] = sm.p(i);
       SC[i] = 1 + 0.25 * (pr.D(P3[3 * i], P3[3 * i + 1], 0) / dmax);       // nearer = slightly larger
       if (shadows) { const sx2 = pr.X(x, y, zf), sy = pr.Y(x, y, zf); shadow.moveTo(sx2 + rB, sy); shadow.ellipse(sx2, sy, rB * 1.1, rB * 0.5, 0, 0, 2 * PI); }
     }
@@ -1130,7 +1319,11 @@ const I18N = {
   // ---------------- Floor textures: pressure (ripple tank) and SPL map ----------------
   const texCv = document.createElement('canvas'), texCtx = texCv.getContext('2d');
   let texDirty = true, splStats = null;
-  function gridDims(R, maxG) { const gx = Math.round(Math.min(maxG, Math.max(120, W / 3))); return [gx, Math.max(40, Math.round(gx * R.Ly / R.Lx))]; }
+  function gridDims(R, maxG, budget) {
+    const m = Math.max(1, sources().list.length), cap = Math.floor(Math.sqrt(budget * R.Lx / (R.Ly * m)));
+    const gx = Math.max(60, Math.min(Math.round(Math.min(maxG, Math.max(120, W / 3))), cap));
+    return [gx, Math.max(30, Math.round(gx * R.Ly / R.Lx))];
+  }
   function gridPts(R, gx, gy) {
     const a = new Float32Array(3 * gx * gy);
     for (let j = 0; j < gy; j++) for (let i = 0; i < gx; i++) { const id = j * gx + i; a[3 * id] = R.cx - R.Lx + (i + 0.5) * 2 * R.Lx / gx; a[3 * id + 1] = R.cy - R.Ly + (j + 0.5) * 2 * R.Ly / gy; }
@@ -1146,15 +1339,15 @@ const I18N = {
   }
   let rippleImg = null;
   function drawRipple(pr, R, V, cp, sp) {
-    const [gx, gy] = gridDims(R, 360);
-    const F = field('rip', [gx, gy, R.Lx, R.Ly, R.cx, R.cy].join(','), () => gridPts(R, gx, gy), 'visual', V.r0).F;
+    const [gx, gy] = gridDims(R, 360, st.sig === 'pulse' ? PULSE_BUDGET : SINE_BUDGET);
+    const sm = sampler('rip', [gx, gy, R.Lx, R.Ly, R.cx, R.cy].join(','), () => gridPts(R, gx, gy), V.r0, cp, sp);
     if (texCv.width !== gx || texCv.height !== gy) { texCv.width = gx; texCv.height = gy; rippleImg = null; }
     if (!rippleImg) rippleImg = texCtx.createImageData(gx, gy);
     const d = rippleImg.data, b = TOK.stageRGB, po = TOK.posRGB, ne = TOK.negRGB;
     for (let i = 0, n = gx * gy; i < n; i++) {
-      const o = 9 * i, q = 4 * i;
-      if (Number.isNaN(F[o + 6])) { d[q + 3] = 0; continue; }
-      const v = pN(F, o, cp, sp), t = Math.min(1, Math.abs(v)), c3 = v >= 0 ? po : ne;
+      const q = 4 * i;
+      if (!sm.ok(i)) { d[q + 3] = 0; continue; }
+      const v = sm.p(i), t = Math.min(1, Math.abs(v)), c3 = v >= 0 ? po : ne;
       d[q] = b[0] + (c3[0] - b[0]) * t; d[q + 1] = b[1] + (c3[1] - b[1]) * t; d[q + 2] = b[2] + (c3[2] - b[2]) * t; d[q + 3] = 255;
     }
     texCtx.putImageData(rippleImg, 0, 0); drawTexture(pr, R);
@@ -1163,7 +1356,7 @@ const I18N = {
   // SPL palette: 3 dB bands from red (0 dB) through yellow and green to blue (−span)
   function splColor(t) { const h = 240 * t, s = 0.85, l = 0.5; const f = n => { const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l); return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }; return [f(0), f(8), f(4)]; }
   function drawSPL(pr, R) {
-    const [gx, gy] = gridDims(R, sources().list.length > 8 ? 300 : 420);
+    const [gx, gy] = gridDims(R, sources().list.length > 8 ? 300 : 420, SINE_BUDGET);
     const fc = field('spl', [gx, gy, R.Lx, R.Ly, R.cx, R.cy].join(','), () => gridPts(R, gx, gy), 'physical', 0.1), F = fc.F;
     if (texDirty || !fc.img || fc.span !== st.span || fc.img.width !== gx) {
       const n = gx * gy, L = new Float32Array(n), vals = [];
@@ -1194,18 +1387,20 @@ const I18N = {
     ctx.stroke();
   }
   function drawSurface(pr, R, V, cp, sp, Hm) {
-    const s = sources(), N = Math.min(160, Math.max(60, Math.ceil(2 * R.Lx / lam() * 12))), Ny = Math.max(20, Math.round(N * R.Ly / R.Lx)), n1 = N + 1, m1 = Ny + 1;
-    const F = field('surf', [N, Ny, R.Lx, R.Ly, R.cx, R.cy].join(','), () => {
+    const s = sources(), budget = st.sig === 'pulse' ? PULSE_BUDGET : SINE_BUDGET;
+    const N = Math.max(30, Math.min(160, Math.max(60, Math.ceil(2 * R.Lx / lam() * 12)), Math.floor(Math.sqrt(budget * R.Lx / (R.Ly * Math.max(1, s.list.length))))));
+    const Ny = Math.max(20, Math.round(N * R.Ly / R.Lx)), n1 = N + 1, m1 = Ny + 1;
+    const sm = sampler('surf', [N, Ny, R.Lx, R.Ly, R.cx, R.cy].join(','), () => {
       const a = new Float32Array(3 * n1 * m1);
       for (let j = 0; j < m1; j++) for (let i = 0; i < n1; i++) { const id = j * n1 + i; a[3 * id] = R.cx - R.Lx + i * 2 * R.Lx / N; a[3 * id + 1] = R.cy - R.Ly + j * 2 * R.Ly / Ny; }
       return a;
-    }, 'visual', V.r0).F;
+    }, V.r0, cp, sp);
     const SX = new Float32Array(n1 * m1), SY = new Float32Array(n1 * m1), PP = new Float32Array(n1 * m1), OK = new Uint8Array(n1 * m1);
     for (let j = 0; j < m1; j++) for (let i = 0; i < n1; i++) {
-      const id = j * n1 + i, o = 9 * id; if (Number.isNaN(F[o + 6])) continue;
+      const id = j * n1 + i; if (!sm.ok(id)) continue;
       const x = R.cx - R.Lx + i * 2 * R.Lx / N, y = R.cy - R.Ly + j * 2 * R.Ly / Ny;
-      const hz2 = Hm * pRaw(F, o, cp, sp) / s.wsum;
-      OK[id] = 1; SX[id] = pr.X(x, y, hz2); SY[id] = pr.Y(x, y, hz2); PP[id] = pN(F, o, cp, sp);
+      const hz2 = Hm * sm.raw(id) / s.wsum;
+      OK[id] = 1; SX[id] = pr.X(x, y, hz2); SY[id] = pr.Y(x, y, hz2); PP[id] = sm.p(id);
     }
     floorOutline(pr, R, 0);
     const b = newBuckets();
@@ -1217,7 +1412,8 @@ const I18N = {
   function drawBlock(pr, R, V, cp, sp) {
     const s = sources(), L = R.Lx, cx = R.cx, cy = R.cy, v = pr.v;
     const sx = Math.sign(v[0]) || 1, sy = Math.sign(v[1]) || 1, sz = Math.sign(v[2]) || 1;   // the eighth facing the camera is removed
-    const fc = field('block', [sx, sy, sz, L, cx, cy, qIn[0].length].join(','), () => {
+    const stride = st.sig === 'pulse' ? Math.max(1, Math.ceil(qIn[0].length * 6 * s.list.length / PULSE_BUDGET)) : 1;
+    const sm = sampler('block', [sx, sy, sz, L, cx, cy, qIn[0].length, stride].join(','), () => {
       const a = [];
       for (let i = 0; i < qIn[0].length; i += 2) {
         a.push(cx, cy + sy * qIn[0][i] * L, sz * qIn[0][i + 1] * L); a.push(cx + sx * qIn[1][i] * L, cy, sz * qIn[1][i + 1] * L); a.push(cx + sx * qIn[2][i] * L, cy + sy * qIn[2][i + 1] * L, 0);
@@ -1227,13 +1423,14 @@ const I18N = {
         const u1 = qOut[1][i], v1 = qOut[1][i + 1]; if (!(u1 * sy > 0 && v1 * sz > 0)) a.push(cx + sx * L, cy + u1 * L, v1 * L);
         const u2 = qOut[2][i], v2 = qOut[2][i + 1]; if (!(u2 * sx > 0 && v2 * sz > 0)) a.push(cx + u2 * L, cy + sy * L, v2 * L);
       }
+      if (stride > 1) { const b2 = []; for (let i = 0; i < a.length / 3; i += stride) b2.push(a[3 * i], a[3 * i + 1], a[3 * i + 2]); return new Float32Array(b2); }
       return new Float32Array(a);
-    }, 'visual', V.r0), F = fc.F, P3 = fc.P3, n = P3.length / 3, Asc = V.A / s.wsum;
+    }, V.r0, cp, sp), P3 = sm.P3, n = sm.n, Asc = V.A / s.wsum;
     const b = newBuckets(), d = Math.max(1.5, Math.min(2.6, W / 600));
     for (let i = 0; i < n; i++) {
-      const o = 9 * i; if (Number.isNaN(F[o + 6])) continue;
-      const x = P3[3 * i] + Asc * dX(F, o, cp, sp), y = P3[3 * i + 1] + Asc * dY(F, o, cp, sp), z = P3[3 * i + 2] + Asc * dZ(F, o, cp, sp);
-      const X = pr.X(x, y, z), Y = pr.Y(x, y, z); b[st.color ? bIdx(pN(F, o, cp, sp)) : NB - 1].rect(X - d / 2, Y - d / 2, d, d);
+      if (!sm.ok(i)) continue;
+      const x = P3[3 * i] + Asc * sm.dx(i), y = P3[3 * i + 1] + Asc * sm.dy(i), z = P3[3 * i + 2] + Asc * sm.dz(i);
+      const X = pr.X(x, y, z), Y = pr.Y(x, y, z); b[st.color ? bIdx(sm.p(i)) : NB - 1].rect(X - d / 2, Y - d / 2, d, d);
     }
     paint(b, true);
     ctx.strokeStyle = TOK.muted; ctx.globalAlpha = 0.6; ctx.lineWidth = 1;
@@ -1252,7 +1449,10 @@ const I18N = {
   // (horizontal for ground stacks, vertical for flown arrays and steered columns, which hang), so the cabinet
   // is drawn in two halves: the far one before the slice (the slice covers it) and the near one after.
   // The red dust cap pulses with the signal of that box.
-  function elPulse(e, cp, sp) { const ph = -2 * PI * st.f * e.delay; return e.pol * (cp * Math.cos(ph) - sp * Math.sin(ph)); }   // Re(pol·e^(i(φ−ωτ)))
+  function elPulse(e, cp, sp) {                                      // Re(pol·e^(i(φ−ωτ))), or the click fired at the delay
+    if (st.sig === 'pulse') return e.pol * P.ricker(pulseT - e.delay, st.f);
+    const ph = -2 * PI * st.f * e.delay; return e.pol * (cp * Math.cos(ph) - sp * Math.sin(ph));
+  }
   // drivers on the front face: v across, z up, from the acoustic centre (metres); back: drivers on the rear face
   const DRIVERS = {
     sub:     { front: [{ k: 'cone', v: 0, z: 0, r: 0.23 }] },
@@ -1397,6 +1597,7 @@ const I18N = {
   }
   function drawWall(pr, R) {
     const s = sources(); if (!s.wall) return;
+    if (s.wall.kind === 'room') { drawRoom(pr, R, s.wall); return; }
     ctx.strokeStyle = TOK.ink; ctx.lineWidth = 2;
     const a = s.wall.kind === 'back' ? [[s.wall.at, R.cy - R.Ly], [s.wall.at, R.cy + R.Ly]] : [[R.cx - R.Lx, s.wall.at], [R.cx + R.Lx, s.wall.at]];
     ctx.beginPath(); ctx.moveTo(pr.X(...a[0]), pr.Y(...a[0], 0)); ctx.lineTo(pr.X(...a[1]), pr.Y(...a[1], 0)); ctx.stroke();
@@ -1408,11 +1609,29 @@ const I18N = {
     }
     ctx.globalAlpha = 1;
   }
+  function drawRoom(pr, R, w) {                                       // four walls, hatched on the outside
+    const seg2 = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(pr.X(x1, y1, 0), pr.Y(x1, y1, 0)); ctx.lineTo(pr.X(x2, y2, 0), pr.Y(x2, y2, 0)); ctx.stroke(); };
+    ctx.strokeStyle = TOK.ink; ctx.lineWidth = 2;
+    seg2(w.x0, w.y0, w.x1, w.y0); seg2(w.x1, w.y0, w.x1, w.y1); seg2(w.x1, w.y1, w.x0, w.y1); seg2(w.x0, w.y1, w.x0, w.y0);
+    ctx.lineWidth = 1; ctx.globalAlpha = 0.45;
+    const h = Math.max(w.x1 - w.x0, w.y1 - w.y0) * 0.02, sides = [[w.x0, w.y0, w.x1, w.y0, 0, -1], [w.x1, w.y0, w.x1, w.y1, 1, 0], [w.x1, w.y1, w.x0, w.y1, 0, 1], [w.x0, w.y1, w.x0, w.y0, -1, 0]];
+    for (const [a, b, c2, d, nx, ny] of sides) {
+      const n2 = Math.max(4, Math.round(Math.hypot(c2 - a, d - b) / (h * 2.5)));
+      for (let i = 0; i <= n2; i++) { const t = i / n2, x = a + (c2 - a) * t, y = b + (d - b) * t; seg2(x, y, x + nx * h + (ny ? h * 0.6 : 0), y + ny * h + (nx ? h * 0.6 : 0)); }
+    }
+    ctx.globalAlpha = 1;
+  }
   function drawHighlight(pr, R, V, cp, sp, zMode, Hm) {
     const s = sources(), rh = Math.min(1.5 * lam() + V.r0, R.Lx * 0.9), x0 = s.cx + rh, y0 = s.cy;
-    const F = P.evaluate(s, new Float32Array([x0, y0, 0]), 1, { k: kk(), f: st.f, alpha: alpha(), law: 'visual', r0: V.r0 });
-    if (Number.isNaN(F[6])) return;
-    const xs = x0 + V.A / s.wsum * dX(F, 0, cp, sp), z = zMode ? Hm * pRaw(F, 0, cp, sp) / s.wsum : 0;
+    let dxv, rawv;
+    if (st.sig === 'pulse') {
+      const pp = P.preparePulse(s, new Float32Array([x0, y0, 0]), 1, { k: kk(), f: st.f, c: c(), alpha: alpha(), law: 'visual', r0: V.r0 });
+      if (!pp.OK[0]) return; const o = P.pulseField(pp, pulseT, new Float32Array(4)); dxv = o[1]; rawv = o[0];
+    } else {
+      const F = P.evaluate(s, new Float32Array([x0, y0, 0]), 1, { k: kk(), f: st.f, alpha: alpha(), law: 'visual', r0: V.r0 });
+      if (Number.isNaN(F[6])) return; dxv = dX(F, 0, cp, sp); rawv = pRaw(F, 0, cp, sp);
+    }
+    const xs = x0 + V.A / s.wsum * dxv, z = zMode ? Hm * rawv / s.wsum : 0;
     ctx.strokeStyle = TOK.muted; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
     const t = pr.top ? 18 / pr.sc : R.Lx * 0.05;
     ctx.beginPath(); ctx.moveTo(pr.X(x0, y0 - t), pr.Y(x0, y0 - t, 0)); ctx.lineTo(pr.X(x0, y0 + t), pr.Y(x0, y0 + t, 0)); ctx.stroke(); ctx.setLineDash([]);
@@ -1503,7 +1722,13 @@ const I18N = {
   let lastProj = null;
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (!paused) phase += 2 * PI * dt / cycleS();
+    if (!paused) {
+      if (st.sig === 'pulse') {
+        if (pulseWait > 0) { pulseWait -= dt; if (pulseWait <= 0) pulseT = -P.pulseHalf(st.f); }
+        else { pulseT += dt / pulseSlow(); if (pulseT > pulseEnd()) pulseWait = 0.8; }
+        $('r_v').textContent = tr('pulse_t', { t: fmtT(Math.max(0, pulseT)), x: Math.round(pulseSlow()) });
+      } else phase += 2 * PI * dt / cycleS();
+    }
     if (phase > 1e6) phase %= 2 * PI;
     draw();
     fpsAcc += dt; fpsN++;
@@ -1527,11 +1752,13 @@ const I18N = {
   function fitScene() {
     const s = sources(); let ext = 0;
     for (const e of scene.elements) { const sz = P.sizeIn(e.type, scene.plane); ext = Math.max(ext, Math.abs(e.x - s.cx) + sz[0], Math.abs(e.y - s.cy) + sz[1]); }
-    if (s.wall) ext = Math.max(ext, s.wall.kind === 'back' ? Math.abs(s.wall.at - s.cx) : Math.abs(s.wall.at - s.cy));
-    st.width = Math.min(W_MAX, Math.max(W_MIN, ext > 0 ? Math.max(4 * lam(), 3.2 * ext, ext * 2 + 3 * lam()) : 4 * lam()));
+    if (s.wall && s.wall.kind === 'room') ext = Math.max(ext, Math.abs(s.wall.x0 - s.cx), Math.abs(s.wall.x1 - s.cx), Math.abs(s.wall.y0 - s.cy), Math.abs(s.wall.y1 - s.cy)) * 1.02;
+    else if (s.wall) ext = Math.max(ext, s.wall.kind === 'back' ? Math.abs(s.wall.at - s.cx) : Math.abs(s.wall.at - s.cy));
+    if (s.wall && s.wall.kind === 'room') st.width = Math.min(W_MAX, Math.max(W_MIN, 2.15 * ext));   // the room fills the screen
+    else st.width = Math.min(W_MAX, Math.max(W_MIN, ext > 0 ? Math.max(4 * lam(), 3.2 * ext, ext * 2 + 3 * lam()) : 4 * lam()));
     invalidateView(); syncUI();
   }
-  const INST_F = { line: 80, arc: 80, arcdelay: 80, gradient: 63, invstack: 63, endfire: 80, lr: 63, uni: 63, steer: 1000, jarray: 2000, delay: 250 };
+  const INST_F = { tm: 63, line: 80, arc: 80, arcdelay: 80, gradient: 63, invstack: 63, endfire: 80, lr: 63, uni: 63, steer: 1000, jarray: 2000, delay: 250 };
   function setInst(id, keepF) {
     st.inst = id; st.custom = false; st.customEls = null;
     const d = P.INSTALLS[id]; st.params = Object.assign({}, d.def); st.elem = d.elem;
@@ -1641,12 +1868,15 @@ const I18N = {
   }
   function buildBoundary() {
     const ch = $('bndChips'); ch.innerHTML = '';
-    for (const k of ['none', 'back', 'side']) {
+    for (const k of ['none', 'back', 'side', 'room']) {
       if (k === 'back' && scene.plane === 'section') continue;
       const b = document.createElement('button'); b.textContent = tr(k === 'side' && scene.plane === 'section' ? 'b_floor' : 'b_' + k);
       b.setAttribute('aria-pressed', String(st.bnd === k)); b.onclick = () => { st.bnd = k; invalidate(); syncUI(); }; ch.appendChild(b);
     }
     $('bndCtl').hidden = st.bnd === 'none';
+    $('roomCtl').hidden = st.bnd !== 'room';
+    const rc = $('roChips'); rc.innerHTML = '';
+    for (const o of [1, 2, 3]) { const b = document.createElement('button'); b.textContent = o; b.setAttribute('aria-pressed', String(st.ro === o)); b.onclick = () => { st.ro = o; invalidate(); syncUI(); }; rc.appendChild(b); }
   }
   function instNote() {
     const p = st.params, l = c();
@@ -1671,6 +1901,11 @@ const I18N = {
     $('instNote').textContent = instNote();
     const k1 = kk(), E = P.ELEMENTS[st.elem];
     $('elemNote').textContent = T('en_' + st.elem) + (E && E.size[0] ? ' ' + T('ka', { ka: dec(k1 * Math.max(E.size[1], 0.3) / 2, 2) }) : '');
+    $('rwLbl').textContent = T(scene.plane === 'section' ? 'rheight' : 'rwidth');
+    $('o_rw').textContent = fmtLen(st.rw); $('rw').value = fromLog(st.rw, 2, 120); $('o_rd').textContent = fmtLen(st.rd); $('rd').value = fromLog(st.rd, 2, 200);
+    document.querySelectorAll('#sigChips button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sig === st.sig)));
+    $('signote').textContent = T(st.sig === 'pulse' ? 'signote_pulse' : 'signote_sine');
+    $('legendNote').hidden = st.sig !== 'pulse';
     $('o_bd').textContent = fmtLen(st.bdist); $('bd').value = fromLog(st.bdist, 0.02, 30); $('o_br').textContent = Math.round(st.brefl * 100) + ' %'; $('br').value = Math.round(st.brefl * 100);
     // medium
     const m = med(); $('tempCtl').hidden = !m.temp; $('humCtl').hidden = !m.hum; $('cCtl').hidden = st.medium !== 'custom';
@@ -1692,7 +1927,8 @@ const I18N = {
     cv.className = st.micOn ? 'mic' : (isTop() ? '' : 'orbit');
     // readings
     $('r_f').textContent = fmtF(st.f); $('r_T').textContent = fmtT(1 / st.f);
-    $('r_v').textContent = '1 ' + T('cycle') + ' = ' + fmtCycle(cycleS()) + (capped() ? ' (' + T('capped') + ')' : '');
+    $('r_v').textContent = st.sig === 'pulse' ? T('pulse_t', { t: fmtT(Math.max(0, pulseT)), x: Math.round(pulseSlow()) })
+      : '1 ' + T('cycle') + ' = ' + fmtCycle(cycleS()) + (capped() ? ' (' + T('capped') + ')' : '');
     $('r_c').textContent = dec(c(), 1) + ' m/s'; $('r_l').textContent = fmtLen(lam());
     $('r_z').textContent = Math.round(m.rho(st.temp) * c()).toLocaleString(st.lang) + ' Pa·s/m';
     $('r_a').textContent = st.absorb ? dec(a * 100, 2) + ' dB / 100 m' : '—'; $('r_s').textContent = fmtLen(st.width);
@@ -1719,6 +1955,11 @@ const I18N = {
     $('s').oninput = () => { st.width = toLog(+$('s').value, W_MIN, W_MAX); invalidateView(); syncUI(false); };
     $('lock').onchange = () => { st.lock = $('lock').checked; syncUI(false); };
     $('procReset').onclick = () => { st.custom = false; st.customEls = null; regen(); syncUI(); };
+    $('rw').oninput = () => { st.rw = toLog(+$('rw').value, 2, 120); invalidate(); syncUI(false); };
+    $('rd').oninput = () => { st.rd = toLog(+$('rd').value, 2, 200); invalidate(); syncUI(false); };
+    document.querySelectorAll('#sigChips button').forEach(b => b.onclick = () => { if (b.dataset.sig === 'pulse') fire(); else { st.sig = 'sine'; syncUI(false); } });
+    $('fire').onclick = fire;
+    wireSave();
     $('bd').oninput = () => { st.bdist = toLog(+$('bd').value, 0.02, 30); invalidate(); syncUI(false); };
     $('br').oninput = () => { st.brefl = +$('br').value / 100; invalidate(); syncUI(false); };
     $('t').oninput = () => { st.temp = +$('t').value; if (!st.custom) regen(); else invalidate(); syncUI(false); };
@@ -1777,10 +2018,11 @@ const I18N = {
       else if (k === 'g' || k === 'G') fitScene();
       else if (k === 't' || k === 'T') { st.tp = !st.tp; syncUI(false); }
       else if (k === 'm' || k === 'M') { st.micOn = !st.micOn; syncUI(false); }
+      else if (k === 'p' || k === 'P') fire();
       else if (k === 'c' || k === 'C') { const cs = ['top', 'iso', 'low']; setCam(cs[(cs.indexOf(st.cam) + 1) % 3]); }
       else if (k >= '1' && k <= '5') { st.mode = ['molecules', 'ripple', 'spl', 'surface', 'block'][+k - 1]; syncUI(false); }
       else if (k === '?') $('help').hidden = !$('help').hidden;
-      else if (k === 'Escape') { $('help').hidden = true; $('exMenu').hidden = true; }
+      else if (k === 'Escape') { $('help').hidden = true; $('exMenu').hidden = true; $('saveMenu').hidden = true; }
     });
     window.addEventListener('resize', resize);
   }
@@ -1804,9 +2046,12 @@ const I18N = {
     ['delay', () => { reset(); setInst('delay'); st.mode = 'ripple'; st.width = 34; setCam0('top'); }],
     ['helium', () => { reset(); st.medium = 'helium'; st.f = 1000; setInst('single', true); st.elem = 'point'; regen(); st.width = 1.4; st.mode = 'molecules'; setCam0('top'); }],
     ['water', () => { reset(); st.medium = 'water'; st.f = 1000; setInst('single', true); st.elem = 'point'; regen(); st.width = 6; st.mode = 'ripple'; setCam0('top'); }],
+    ['tm', () => { reset(); setInst('tm'); st.mode = 'spl'; st.polar = true; st.width = 30; setCam0('top'); }],
+    ['room', () => { reset(); setInst('single', true); st.elem = 'sub'; st.f = 50; st.bnd = 'room'; st.rw = 12; st.rd = 20; st.bdist = 1.5; st.brefl = 0.9; st.ro = 2; regen(); st.mode = 'spl'; setCam0('top'); fitScene(); }],
+    ['pulse', () => { reset(); setInst('endfire'); st.mode = 'ripple'; st.polar = false; st.width = 30; setCam0('top'); st.sig = 'pulse'; pulseT = -P.pulseHalf(st.f); pulseWait = 0; }],
     ['dipole', () => { reset(); setInst('single', true); st.elem = 'dipole'; st.f = 200; regen(); st.mode = 'ripple'; st.width = 7; st.polar = true; setCam0('top'); }],
   ];
-  function reset() { st.medium = 'air'; st.temp = 20; st.bnd = 'none'; st.custom = false; st.customEls = null; st.polar = false; st.micOn = false; st.mic = null; st.lock = true; }
+  function reset() { st.sig = 'sine'; st.medium = 'air'; st.temp = 20; st.bnd = 'none'; st.custom = false; st.customEls = null; st.polar = false; st.micOn = false; st.mic = null; st.lock = true; }
   function setCam0(id) { st.cam = id; Object.assign(cam, camPreset(id)); order = null; }
   function buildExamples() {
     const m = $('exMenu'); m.innerHTML = '';
@@ -1816,8 +2061,86 @@ const I18N = {
     }
   }
   function buildKeys() {
-    const rows = [['← →', 'k_freq'], ['Space', 'k_space'], ['F', 'k_f'], ['G', 'k_g'], ['T', 'k_t'], ['1 – 5', 'k_modes'], ['C', 'k_c'], ['M', 'k_m'], ['↔', 'k_drag'], ['?', 'k_help']];
+    const rows = [['← →', 'k_freq'], ['Space', 'k_space'], ['P', 'k_p'], ['F', 'k_f'], ['G', 'k_g'], ['T', 'k_t'], ['1 – 5', 'k_modes'], ['C', 'k_c'], ['M', 'k_m'], ['↔', 'k_drag'], ['?', 'k_help']];
     $('keysTable').innerHTML = ''; for (const [k, t] of rows) { const r = document.createElement('tr'); r.innerHTML = '<td><kbd></kbd></td><td></td>'; r.querySelector('kbd').textContent = k; r.lastChild.textContent = tr(t); $('keysTable').appendChild(r); }
+  }
+
+  // ---------------- Save: image, scene file, scene link ----------------
+  const SCENE_SKIP = ['tab', 'lang'];                              // viewer preferences, not part of a scene
+  function sceneData() { const o = {}; for (const k of Object.keys(DEF)) if (!SCENE_SKIP.includes(k)) o[k] = st[k]; o.app = 'sound-field-lab'; o.v = 1; return o; }
+  // copy only known keys with the expected type (a scene file or link is untrusted input)
+  function loadScene(o) {
+    if (!o || typeof o !== 'object' || o.app !== 'sound-field-lab') return false;
+    for (const k of Object.keys(DEF)) {
+      if (SCENE_SKIP.includes(k) || !(k in o)) continue;
+      const v = o[k], d = DEF[k];
+      if (k === 'params') { if (v && typeof v === 'object') { st.params = {}; for (const pk in v) if (P.PARAM_RANGE[pk] && Number.isFinite(+v[pk])) st.params[pk] = +v[pk]; } continue; }
+      if (k === 'mic') { st.mic = v && Number.isFinite(+v.x) && Number.isFinite(+v.y) ? { x: +v.x, y: +v.y } : null; continue; }
+      if (k === 'customEls') {
+        st.customEls = Array.isArray(v) ? v.filter(e => e && P.ELEMENTS[e.type]).map(e => ({ x: +e.x || 0, y: +e.y || 0, aim: +e.aim || 0, gain: +e.gain || 0,
+          delay: Math.max(0, +e.delay || 0), pol: e.pol < 0 ? -1 : 1, type: e.type, mute: !!e.mute })) : null;
+        continue;
+      }
+      if (typeof v === typeof d) st[k] = v;
+    }
+    if (!P.INSTALLS[st.inst]) st.inst = 'single'; if (!P.ELEMENTS[st.elem]) st.elem = 'point'; if (!P.MEDIA[st.medium]) st.medium = 'air';
+    if (!['sine', 'pulse'].includes(st.sig)) st.sig = 'sine'; if (st.cam === 'free') st.cam = 'iso';
+    if (st.custom && !st.customEls) st.custom = false;
+    return true;
+  }
+  function applyScene(o) {
+    if (!loadScene(o)) { toast(tr('loadfail')); return; }
+    lastPlane = null; buildParticles(); regen(); Object.assign(cam, camPreset(st.cam)); order = null;
+    if (st.sig === 'pulse') { pulseT = -P.pulseHalf(st.f); pulseWait = 0; }
+    buildCards(); syncUI(); toast(tr('loaded'));
+  }
+  const b64u = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64u = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+  function sceneLink() { return location.href.split('#')[0] + '#s=' + b64u(JSON.stringify(sceneData())); }
+  let toastT = 0;
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
+  function download(name, href) { const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  const fileName = ext => ('sound-field-lab-' + st.inst + '-' + Math.round(st.f) + 'Hz.' + ext);
+  function savePNG() {
+    const bar = 34, out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height + Math.round(bar * dpr);
+    const g = out.getContext('2d'); g.drawImage(cv, 0, 0);
+    const pad = 12 * dpr;
+    if (!$('polarCard').hidden) { const pc = $('polar'), s2 = 180 * dpr; g.fillStyle = TOK.panel; g.fillRect(cv.width - s2 - pad, cv.height - s2 - pad, s2, s2); g.drawImage(pc, cv.width - s2 - pad, cv.height - s2 - pad, s2, s2); }
+    if (st.mode === 'spl') {                                        // the colour scale, so the picture can be read alone
+      const bands = st.span / 3, w = 220 * dpr, h = 12 * dpr, x0 = pad, y0 = cv.height - h - 2 * pad;
+      for (let i = 0; i < bands; i++) { g.fillStyle = 'rgb(' + splColor(i / Math.max(1, bands - 1)).join(',') + ')'; g.fillRect(x0 + i * w / bands, y0, w / bands + 1, h); }
+      g.fillStyle = TOK.ink; g.font = (11 * dpr) + 'px system-ui, sans-serif'; g.textAlign = 'left'; g.fillText('0 … −' + st.span + ' dB', x0, y0 - 4 * dpr);
+    }
+    g.fillStyle = TOK.panel; g.fillRect(0, cv.height, out.width, bar * dpr);
+    g.fillStyle = TOK.ink; g.font = '600 ' + (13 * dpr) + 'px system-ui, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    const m = med(), parts = ['Sound Field Lab', tr('i_' + st.inst) + ' · ' + scene.elements.length + ' × ' + tr('e_' + st.elem), (st.sig === 'pulse' ? tr('sig_pulse') + ' ' : '') + fmtF(st.f),
+      tr('md_' + st.medium) + (m.temp ? ' ' + st.temp + ' °C' : ''), tr('r_s') + ' ' + fmtLen(st.width)];
+    g.fillText(parts.join('   ·   '), pad, cv.height + bar * dpr / 2);
+    g.textAlign = 'right'; g.fillStyle = TOK.muted; g.font = (12 * dpr) + 'px system-ui, sans-serif';
+    g.fillText('gitpieroz78.github.io/sound-field-lab', out.width - pad, cv.height + bar * dpr / 2);
+    download(fileName('png'), out.toDataURL('image/png'));
+  }
+  function wireSave() {
+    const menu = $('saveMenu');
+    $('saveBtn').onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; $('saveBtn').setAttribute('aria-expanded', String(!menu.hidden)); };
+    document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== $('saveBtn')) menu.hidden = true; });
+    $('svPng').onclick = () => { menu.hidden = true; savePNG(); };
+    $('svJson').onclick = () => { menu.hidden = true; download(fileName('json'), 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(sceneData(), null, 1))); };
+    $('svOpen').onclick = () => $('svFile').click();
+    $('svFile').onchange = () => {
+      const f = $('svFile').files[0]; if (!f) return; menu.hidden = true;
+      const r = new FileReader(); r.onload = () => { try { applyScene(JSON.parse(r.result)); } catch (er) { toast(tr('loadfail')); } }; r.readAsText(f); $('svFile').value = '';
+    };
+    $('svLink').onclick = () => {
+      const link = sceneLink();
+      try { history.replaceState(null, '', link); } catch (er) { /* opened from disk or in a sandbox: ignore */ }
+      const done = () => { menu.hidden = true; toast(tr('copied')); };
+      const fail = () => {                                          // no clipboard: show the link to copy by hand
+        let box = menu.querySelector('.linkbox'); if (!box) { box = document.createElement('input'); box.className = 'linkbox field'; box.readOnly = true; menu.appendChild(box); }
+        box.value = link; box.select(); toast(tr('copyfail'));
+      };
+      try { navigator.clipboard.writeText(link).then(done, fail); } catch (er) { fail(); }
+    };
   }
 
   // ---------------- Init ----------------
@@ -1825,6 +2148,8 @@ const I18N = {
   if (!P.ELEMENTS[st.elem]) st.elem = 'point';
   if (!P.MEDIA[st.medium]) st.medium = 'air';
   if (st.cam === 'free') st.cam = 'iso';
+  if (location.hash.startsWith('#s=')) { try { loadScene(JSON.parse(unb64u(location.hash.slice(3)))); } catch (er) { /* broken link: keep the saved state */ } }
+  if (st.sig === 'pulse') pulseT = -P.pulseHalf(st.f);
   Object.assign(cam, CAMS[st.cam] || CAMS.top);
   readTokens(); resize(); buildParticles(); regen(); wire(); buildExamples(); buildKeys(); syncUI(); updateLegend();
   if (matchMedia('(max-width: 900px)').matches) $('ro').classList.add('collapsed');
@@ -1832,7 +2157,8 @@ const I18N = {
   requestAnimationFrame(frame);
 
   // console checks (same numbers as the node tests)
-  window.soundFieldLab = { state: st, scene: () => scene, P };
+  // console and tests: seek(t) shows the pulse at time t (seconds) without waiting for the animation
+  window.soundFieldLab = { state: st, scene: () => scene, P, seek: t => { if (st.sig === 'pulse') { pulseT = t; pulseWait = 0; paused = true; draw(); syncUI(false); } } };
 })();
 </script>
 </body>
