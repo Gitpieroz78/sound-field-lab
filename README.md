@@ -56,7 +56,7 @@ double-click to go back. Every mode works with every camera.
 | Steered line | hanging column of 16 small drivers | linear delay ramp: the beam tilts up or down by the angle |
 | Line array (J) | flown array, vertical section, J curve | none |
 | Delay speaker | main and a delay downstream | delay = distance / c |
-| TM Array | subs flown in a column (Meyer Sound, Thomas Mundorf): line array in the vertical, point source in the horizontal | none |
+| TM Array | two columns of subs flown face to face, a small gap between the fronts (Meyer Sound, Thomas Mundorf): line array in the vertical, point source in the horizontal | same signal, no delay |
 
 Delays are computed with the speed of sound of the medium you are in, as a system tech would
 set them. The **processing table** lets you change gain, delay, polarity and mute of each box;

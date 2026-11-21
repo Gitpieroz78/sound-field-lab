@@ -549,12 +549,13 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
     steer:    { params: ['n', 'spacing', 'angle'], def: { n: 16, spacing: 0.12, angle: 15 }, elem: 'mini', plane: 'section' },
     jarray:   { params: ['n', 'angle'], def: { n: 12, angle: 30 }, elem: 'line', plane: 'section' },
     delay:    { params: ['dist'], def: { dist: 20 }, elem: 'box' },
-    // TM Array (Meyer Sound, with Thomas Mundorf): subs flown in a column, a line array in the vertical and a
-    // point source in the horizontal (ProSoundWeb, "How the TM Array for subwoofers works"; 10 boxes "a good compromise")
-    tm:       { params: ['n', 'spacing'], def: { n: 10, spacing: 0.6 }, elem: 'sub', plane: 'section' },
+    // TM Array (Meyer Sound, with Thomas Mundorf): two columns of subs flown face to face, a line array in the vertical
+    // and a point source in the horizontal (ProSoundWeb, "How the TM Array for subwoofers works"; Meyer MAPP example
+    // "08 TM Array": 2 × 10 subs, fronts 0.5 m apart, aimed 0° and 180°, same processor output)
+    tm:       { params: ['n', 'spacing', 'gap'], def: { n: 10, spacing: 0.6, gap: 0.5 }, elem: 'sub', plane: 'section' },
   };
   const PARAM_RANGE = { n: [1, 24, 1], spacing: [0.1, 6, 0.05], depth: [0.1, 4, 0.01], rear: [-12, 6, 0.5],
-                        angle: [-80, 120, 1], width: [1, 40, 0.5], dist: [2, 80, 0.5] };
+                        angle: [-80, 120, 1], width: [1, 40, 0.5], dist: [2, 80, 0.5], gap: [0, 3, 0.05] };
 
   function layout(inst, p, type, c) {
     const E = (x, y, aim, extra) => Object.assign({ x, y, aim, gain: 0, delay: 0, pol: 1, type, mute: false }, extra || {});
@@ -607,7 +608,9 @@ details.box > .in { padding: 0 10px 10px; display: flex; flex-direction: column;
         for (const e of out) { e.y = -(e.y - cy); e.aim = -e.aim; }   // screen convention: y grows downwards
         break; }
       case 'delay': out.push(E(0, 0, 0)); out.push(E(p.dist, 0, 0, { delay: p.dist / c })); break;
-      case 'tm': for (let i = 0; i < n; i++) out.push(E(0, across(i, p.spacing), 0)); break;   // vertical column, y down
+      case 'tm':                                                   // two vertical columns, fronts facing each other, y down
+        for (let i = 0; i < n; i++) { const y = across(i, p.spacing); out.push(E(-p.gap / 2, y, 0)); out.push(E(p.gap / 2, y, PI)); }
+        break;
       default: out.push(E(0, 0, 0));
     }
     return { elements: out, plane: (INSTALLS[inst] && INSTALLS[inst].plane) || 'plan' };
@@ -800,8 +803,9 @@ const I18N = {
     b_room: 'Room', rwidth: 'Room width', rheight: 'Room height', rdepth: 'Room length', rorder: 'Reflections up to order',
     roomnote: 'Rigid walls as mirror images of every box (order 1 = one bounce). Real rooms also absorb by frequency and diffract around objects: this is the first idea, not a room prediction.',
     i_tm: 'TM Array',
-    n_tm: 'Subs flown in a column (Meyer Sound technique developed with Thomas Mundorf): a line array in the vertical, a point source in the horizontal. The column narrows the low end in height; the small footprint keeps it omnidirectional around.',
-    ex_tm: 'TM Array', exd_tm: '10 subs flown in a column, 63 Hz, side view',
+    n_tm: 'Two columns of subs flown face to face, a small gap between the fronts, same signal (Meyer Sound technique developed with Thomas Mundorf; MAPP example: 2 × 10 subs, fronts 50 cm apart). A line array in the vertical, a point source in the horizontal: the columns narrow the low end in height, the compact pair keeps it omnidirectional around.',
+    p_n_tm: 'Subs per column', p_gap: 'Gap between the fronts',
+    ex_tm: 'TM Array', exd_tm: '2 columns × 10 subs flown face to face, 63 Hz, side view',
     ex_room: 'Sub in a room', exd_room: 'One sub in a 20 × 12 m room, reflections up to order 2, 50 Hz',
     ex_pulse: 'End-fire pulse', exd_pulse: 'A click from 4 subs in end-fire: together in front, spread out behind',
     k_p: 'Fire a pulse (click)',
@@ -914,8 +918,9 @@ const I18N = {
     b_room: 'Sala', rwidth: 'Ancho de la sala', rheight: 'Altura de la sala', rdepth: 'Largo de la sala', rorder: 'Reflexiones hasta el orden',
     roomnote: 'Paredes rígidas como imágenes especulares de cada caja (orden 1 = un rebote). Las salas reales también absorben según la frecuencia y difractan alrededor de los objetos: es la primera idea, no una predicción de sala.',
     i_tm: 'TM Array',
-    n_tm: 'Subs colgados en columna (técnica de Meyer Sound desarrollada con Thomas Mundorf): un line array en vertical y una fuente puntual en horizontal. La columna estrecha los graves en altura; la huella pequeña los mantiene omnidireccionales alrededor.',
-    ex_tm: 'TM Array', exd_tm: '10 subs colgados en columna, 63 Hz, vista lateral',
+    n_tm: 'Dos columnas de subs colgadas frente a frente, poco espacio entre los frentes y la misma señal (técnica de Meyer Sound desarrollada con Thomas Mundorf; ejemplo MAPP: 2 × 10 subs, frentes a 50 cm). Un line array en vertical, una fuente puntual en horizontal: las columnas estrechan los graves en altura, la pareja compacta los mantiene omnidireccionales alrededor.',
+    p_n_tm: 'Subs por columna', p_gap: 'Espacio entre los frentes',
+    ex_tm: 'TM Array', exd_tm: '2 columnas × 10 subs colgadas frente a frente, 63 Hz, vista lateral',
     ex_room: 'Sub en una sala', exd_room: 'Un sub en una sala de 20 × 12 m, reflexiones hasta el orden 2, 50 Hz',
     ex_pulse: 'Pulso end-fire', exd_pulse: 'Un clic de 4 subs en end-fire: juntos al frente, separados detrás',
     k_p: 'Disparar un pulso (clic)',
@@ -1022,8 +1027,9 @@ const I18N = {
     b_room: 'Sala', rwidth: 'Larghezza della sala', rheight: 'Altezza della sala', rdepth: 'Lunghezza della sala', rorder: 'Riflessioni fino all’ordine',
     roomnote: 'Pareti rigide come immagini speculari di ogni cassa (ordine 1 = un rimbalzo). Le sale vere assorbono anche in base alla frequenza e diffrangono attorno agli oggetti: è la prima idea, non una previsione della sala.',
     i_tm: 'TM Array',
-    n_tm: 'Sub appesi in colonna (tecnica Meyer Sound sviluppata con Thomas Mundorf): un line array in verticale, una sorgente puntiforme in orizzontale. La colonna stringe le basse in altezza; l’ingombro piccolo le tiene omnidirezionali tutto intorno.',
-    ex_tm: 'TM Array', exd_tm: '10 sub appesi in colonna, 63 Hz, vista di lato',
+    n_tm: 'Due colonne di sub appese una di fronte all’altra, con poco spazio tra i fronti e lo stesso segnale (tecnica Meyer Sound sviluppata con Thomas Mundorf; esempio MAPP: 2 × 10 sub, fronti a 50 cm). Un line array in verticale, una sorgente puntiforme in orizzontale: le colonne stringono le basse in altezza, la coppia compatta le tiene omnidirezionali tutto intorno.',
+    p_n_tm: 'Sub per colonna', p_gap: 'Spazio tra i fronti',
+    ex_tm: 'TM Array', exd_tm: '2 colonne × 10 sub appese una di fronte all’altra, 63 Hz, vista di lato',
     ex_room: 'Sub in una sala', exd_room: 'Un sub in una sala di 20 × 12 m, riflessioni fino al 2° ordine, 50 Hz',
     ex_pulse: 'Impulso end-fire', exd_pulse: 'Un clic da 4 sub in end-fire: insieme davanti, sparpagliati dietro',
     k_p: 'Spara un impulso (clic)',
@@ -1130,8 +1136,9 @@ const I18N = {
     b_room: 'Salle', rwidth: 'Largeur de la salle', rheight: 'Hauteur de la salle', rdepth: 'Longueur de la salle', rorder: 'Réflexions jusqu’à l’ordre',
     roomnote: 'Parois rigides comme images miroir de chaque enceinte (ordre 1 = un rebond). Les vraies salles absorbent aussi selon la fréquence et diffractent autour des objets : c’est une première idée, pas une prédiction de salle.',
     i_tm: 'TM Array',
-    n_tm: 'Subs accrochés en colonne (technique Meyer Sound développée avec Thomas Mundorf) : un line array à la verticale, une source ponctuelle à l’horizontale. La colonne resserre le grave en hauteur ; la petite emprise le garde omnidirectionnel tout autour.',
-    ex_tm: 'TM Array', exd_tm: '10 subs accrochés en colonne, 63 Hz, vue de côté',
+    n_tm: 'Deux colonnes de subs accrochées face à face, peu d’espace entre les faces avant et le même signal (technique Meyer Sound développée avec Thomas Mundorf ; exemple MAPP : 2 × 10 subs, faces à 50 cm). Un line array à la verticale, une source ponctuelle à l’horizontale : les colonnes resserrent le grave en hauteur, la paire compacte le garde omnidirectionnel tout autour.',
+    p_n_tm: 'Subs par colonne', p_gap: 'Espace entre les faces avant',
+    ex_tm: 'TM Array', exd_tm: '2 colonnes × 10 subs accrochées face à face, 63 Hz, vue de côté',
     ex_room: 'Sub dans une salle', exd_room: 'Un sub dans une salle de 20 × 12 m, réflexions jusqu’à l’ordre 2, 50 Hz',
     ex_pulse: 'Impulsion end-fire', exd_pulse: 'Un clic de 4 subs en end-fire : ensemble devant, étalés derrière',
     k_p: 'Envoyer une impulsion (clic)',
@@ -1976,6 +1983,7 @@ const I18N = {
     const i = st.inst;
     if (p === 'angle') return tr(i === 'steer' ? 'p_angle_steer' : i === 'jarray' ? 'p_angle_j' : i === 'uni' ? 'p_angle_uni' : 'p_angle');
     if (p === 'n' && i === 'uni') return tr('p_n_ef');
+    if (p === 'n' && i === 'tm') return tr('p_n_tm');
     if (p === 'depth' && (i === 'endfire' || i === 'uni')) return tr('p_depth_ef');
     if (p === 'dist' && i === 'delay') return tr('p_dist');
     return tr('p_' + p);
